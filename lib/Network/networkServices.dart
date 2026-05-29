@@ -7,8 +7,6 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:uuid/uuid.dart';
 import 'package:web_socket_channel/status.dart' as status;
 import 'package:web_socket_channel/web_socket_channel.dart';
@@ -70,35 +68,29 @@ class AuthService {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         print('FULL SIGNIN RESPONSE: $data');
-        final prefs = await SharedPreferences.getInstance();
+        const secureStorage = FlutterSecureStorage();
 
         if (data['token'] != null) {
-          await prefs.setString('access_token', data['token']);
+          await secureStorage.write(key: 'access_token', value: data['token']);
         }
 
         final String? refreshTokenHeader = response.headers['refresh_token'];
 
         if (refreshTokenHeader != null) {
-          // If the token comes with "Bearer " prefix in the header, you might want to remove it:
-          // final cleanToken = refreshTokenHeader.replaceFirst('Bearer ', '');
-
-          await prefs.setString('refresh_token', refreshTokenHeader);
-          print(
-            'Refresh Token extracted from header and saved: $refreshTokenHeader',
+          await secureStorage.write(
+            key: 'refresh_token',
+            value: refreshTokenHeader,
           );
-          print('Header refresh token: ${response.headers['refresh_token']}');
-          print('Cookie header: ${response.headers['set-cookie']}');
-          // In signIn, after saving tokens:
+
           final String? deviceIdCookie = _extractCookieValue(
             response.headers['set-cookie'] ?? '',
             'device_id',
           );
           if (deviceIdCookie != null) {
-            await prefs.setString('device_id', deviceIdCookie);
+            await secureStorage.write(key: 'device_id', value: deviceIdCookie);
             print('Device ID from backend saved: $deviceIdCookie');
           }
         } else {
-          // Printing all header keys to help you debug what the actual key name is
           print(
             'No refresh token found. Available header keys: ${response.headers.keys}',
           );
@@ -118,7 +110,6 @@ class AuthService {
           message: "Server error, try again later",
         );
       }
-
       return AuthResult(success: false, message: "Something went wrong");
     } catch (e) {
       print('Network Error during Sign In: $e');
@@ -310,32 +301,34 @@ class AuthService {
         }),
       );
 
-      print("Stuts code of sign up : ${response.statusCode}");
-      print("body of sign up : ${response.body}");
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body);
-        final prefs = await SharedPreferences.getInstance();
+        const secureStorage = FlutterSecureStorage();
 
         if (data['token'] != null) {
-          // or 'access_token' depending on your API
-          await prefs.setString('access_token', data['token']);
+          await secureStorage.write(key: 'access_token', value: data['token']);
           print('Access token saved: ${data['token']}');
         }
+
         final String? refreshTokenHeader = response.headers['refresh_token'];
         if (refreshTokenHeader != null) {
-          await prefs.setString('refresh_token', refreshTokenHeader);
+          await secureStorage.write(
+            key: 'refresh_token',
+            value: refreshTokenHeader,
+          );
           print('refresh token from sign up : $refreshTokenHeader');
         }
+
         final String? deviceIdCookie = _extractCookieValue(
           response.headers['set-cookie'] ?? '',
           'device_id',
         );
         if (deviceIdCookie != null) {
-          await prefs.setString('device_id', deviceIdCookie);
+          await secureStorage.write(key: 'device_id', value: deviceIdCookie);
         }
 
         if (data['exists'] == true) {
-          return AuthResult(success: false, message: "Successfully siging up");
+          return AuthResult(success: false, message: "Successfully signing up");
         }
         return AuthResult(success: true, message: "");
       }
@@ -363,31 +356,32 @@ class AuthService {
   //--------------------------
   Future<AuthResult> signOut() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      //final String deviceId = await DeviceManager.getDeviceId();
-      final String? refreshToken = prefs.getString('refresh_token');
-      final String? deviceId = prefs.getString('device_id');
-      print('SignOut - deviceId: $deviceId');
-      print('SignOut - refreshToken: $refreshToken');
+      const secureStorage = FlutterSecureStorage();
+
+      final String? refreshToken = await secureStorage.read(
+        key: 'refresh_token',
+      );
+      final String? deviceId = await secureStorage.read(key: 'device_id');
+
+      final Map<String, String> headers = {'Content-Type': 'application/json'};
+      if (deviceId != null) headers['x-device-id'] = deviceId;
+      if (refreshToken != null) {
+        headers['Authorization'] = 'Bearer $refreshToken';
+      }
+
       final response = await http.delete(
         Uri.parse('$_baseUrl/auth/signout'),
-        headers: {
-          'Content-Type': 'application/json',
-          'x-device-id': deviceId!,
-          if (refreshToken != null) 'Authorization': 'Bearer $refreshToken',
-        },
+        headers: headers,
       );
-      print('SignOut status: ${response.statusCode}');
-      print('SignOut body: ${response.body}');
-      if (response.statusCode == 200 || response.statusCode == 204) {
-        await prefs.remove('access_token');
-        await prefs.remove('refresh_token');
 
+      print('signOut status: ${response.statusCode}');
+      print('signOut body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        await secureStorage.deleteAll();
         return AuthResult(success: true, message: "Signed out successfully");
       }
       if (response.statusCode == 401) {
-        await prefs.remove('access_token');
-        await prefs.remove('refresh_token');
         return AuthResult(success: false, message: "Already signed out");
       }
       if (response.statusCode == 500) {
@@ -397,8 +391,6 @@ class AuthService {
         );
       }
 
-      print('SignOut Failed: ${response.statusCode}');
-      print('Response body: ${response.body}');
       return AuthResult(success: false, message: "Something went wrong");
     } catch (e) {
       print('Network Error during Sign Out: $e');
@@ -412,10 +404,13 @@ class AuthService {
   // -------------------------
   Future<AuthResult> getRefreshToken() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final String? accessToken = prefs.getString('access_token');
-      final String? refreshToken = prefs.getString('refresh_token');
-      final String? deviceId = prefs.getString('device_id');
+      const secureStorage = FlutterSecureStorage();
+
+      final String? accessToken = await secureStorage.read(key: 'access_token');
+      final String? refreshToken = await secureStorage.read(
+        key: 'refresh_token',
+      );
+      final String? deviceId = await secureStorage.read(key: 'device_id');
 
       if (accessToken == null || refreshToken == null) {
         return AuthResult(
@@ -430,9 +425,7 @@ class AuthService {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $accessToken',
           'Cookie':
-              'access_token=$accessToken; refresh_token=$refreshToken;device_id=$deviceId',
-          //'x-device-id': deviceId,
-          //'Cookie': 'refresh_token=$refreshToken',
+              'access_token=$accessToken; refresh_token=$refreshToken; device_id=$deviceId',
         },
       );
 
@@ -441,11 +434,13 @@ class AuthService {
         final String? newRefreshToken = response.headers['refresh_token'];
 
         if (newAccessToken != null) {
-          await prefs.setString('access_token', newAccessToken);
+          await secureStorage.write(key: 'access_token', value: newAccessToken);
         }
-
         if (newRefreshToken != null) {
-          await prefs.setString('refresh_token', newRefreshToken);
+          await secureStorage.write(
+            key: 'refresh_token',
+            value: newRefreshToken,
+          );
         }
 
         return AuthResult(
@@ -455,8 +450,8 @@ class AuthService {
       }
 
       if (response.statusCode == 401) {
-        await prefs.remove('access_token');
-        await prefs.remove('refresh_token');
+        await secureStorage.delete(key: 'access_token');
+        await secureStorage.delete(key: 'refresh_token');
         print('Refresh token failed with 401: ${response.body}');
         return AuthResult(
           success: false,
@@ -556,10 +551,10 @@ class AuthService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final prefs = await SharedPreferences.getInstance();
+        const secureStorage = FlutterSecureStorage();
 
         if (data['token'] != null) {
-          await prefs.setString('access_token', data['token']);
+          await secureStorage.write(key: 'access_token', value: data['token']);
         }
         return AuthResult(
           success: true,
@@ -594,10 +589,11 @@ class AuthService {
     String newPassword,
   ) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final String? accessToken = prefs.getString('access_token');
-      final String? deviceId = prefs.getString('device_id');
-      // 1. Check if the user is actually logged in
+      const secureStorage = FlutterSecureStorage();
+
+      final String? accessToken = await secureStorage.read(key: 'access_token');
+      final String? deviceId = await secureStorage.read(key: 'device_id');
+
       if (accessToken == null) {
         return AuthResult(
           success: false,
@@ -605,16 +601,12 @@ class AuthService {
         );
       }
 
-      // 2. Make the request to the backend
-      // Note: Verify with your backend developer if this should be a PATCH or POST request,
-      // and confirm the exact endpoint URL ('/auth/change-password').
       final response = await http.patch(
         Uri.parse('$_baseUrl/auth/change-password'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $accessToken',
           if (deviceId != null) 'Cookie': 'device_id=$deviceId',
-          //'x-device-id': deviceId!,
         },
         body: jsonEncode({
           'password': newPassword,
@@ -622,13 +614,15 @@ class AuthService {
         }),
       );
 
-      // 3. Handle the responses
       if (response.statusCode == 200 || response.statusCode == 204) {
         if (response.body.isNotEmpty) {
           final data = jsonDecode(response.body);
           print('---------------------------- $data');
           if (data['token'] != null) {
-            await prefs.setString('access_token', data['token']);
+            await secureStorage.write(
+              key: 'access_token',
+              value: data['token'],
+            );
           }
         }
 
@@ -636,10 +630,13 @@ class AuthService {
         final String? newRefreshToken = response.headers['refresh_token'];
 
         if (newAccessToken != null) {
-          await prefs.setString('access_token', newAccessToken);
+          await secureStorage.write(key: 'access_token', value: newAccessToken);
         }
         if (newRefreshToken != null) {
-          await prefs.setString('refresh_token', newRefreshToken);
+          await secureStorage.write(
+            key: 'refresh_token',
+            value: newRefreshToken,
+          );
           print(
             'New refresh token saved after password change: $newRefreshToken',
           );
@@ -657,7 +654,6 @@ class AuthService {
           message: "Incorrect current password",
         );
       }
-
       if (response.statusCode == 500) {
         return AuthResult(
           success: false,
@@ -665,7 +661,6 @@ class AuthService {
         );
       }
 
-      // Catch-all for unexpected status codes
       print('ChangePassword Failed: ${response.statusCode}');
       print('Response body: ${response.body}');
       return AuthResult(success: false, message: "Something went wrong");
@@ -680,24 +675,21 @@ class AuthService {
   //for app google sign in
   Future<AuthResult> googleSignIn() async {
     try {
+      await GoogleSignIn.instance.signOut();
+
       final result = await GoogleSignIn.instance.authenticate();
       final String? idToken = result.authentication.idToken;
-      print("id token : $idToken");
 
       if (idToken == null) {
         return AuthResult(success: false, message: "Failed to get ID token");
       }
 
       final response = await http.post(
-        Uri.parse('$_baseUrl/auth/google/auth?id_token=$idToken'),
+        Uri.parse('$_baseUrl/auth/google/mobile?candidate_id_token=$idToken'),
         headers: {'Content-Type': 'application/json'},
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        print('Google SignIn response status: ${response.statusCode}');
-        print('Google SignIn response body: ${response.body}');
-        print('Google SignIn response headers: ${response.headers}');
-
         const secureStorage = FlutterSecureStorage();
 
         final String? accessToken = response.headers['access_token'];
@@ -715,22 +707,25 @@ class AuthService {
         }
         if (deviceIdCookie != null) {
           await secureStorage.write(key: 'device_id', value: deviceIdCookie);
+        } else {
+          print('❌ device_id is NULL - not in set-cookie header');
+          print('set-cookie header: ${response.headers['set-cookie']}');
         }
+
+        print('access token saved: $accessToken');
+        print('refresh token saved: $refreshToken');
+        print('device id saved: $deviceIdCookie');
 
         return AuthResult(success: true, message: "Welcome!");
       }
 
       if (response.statusCode == 401) {
-        print('Google SignIn unexpected status: ${response.statusCode}');
-        print('Google SignIn response body: ${response.body}');
         return AuthResult(
           success: false,
           message: "Unauthorized Google account",
         );
       }
       if (response.statusCode == 500) {
-        print('Google SignIn unexpected status: ${response.statusCode}');
-        print('Google SignIn response body: ${response.body}');
         return AuthResult(
           success: false,
           message: "Server error, try again later",
@@ -748,23 +743,21 @@ class AuthService {
 
 class DeviceManager {
   static const String _deviceIdKey = 'device_id';
+  static const _secureStorage = FlutterSecureStorage();
 
   static Future<String> getDeviceId() async {
-    final prefs = await SharedPreferences.getInstance();
-    String? deviceId = prefs.getString(_deviceIdKey);
+    String? deviceId = await _secureStorage.read(key: _deviceIdKey);
 
     if (deviceId == null) {
-      // Generate a new unique device ID
       deviceId = const Uuid().v4();
-      await prefs.setString(_deviceIdKey, deviceId);
+      await _secureStorage.write(key: _deviceIdKey, value: deviceId);
     }
 
     return deviceId;
   }
 
   static Future<void> clearDeviceId() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_deviceIdKey);
+    await _secureStorage.delete(key: _deviceIdKey);
   }
 }
 
@@ -778,8 +771,8 @@ class AppointementService {
     int limit = 10,
   }) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final String? accessToken = prefs.getString('access_token');
+      const secureStorage = FlutterSecureStorage();
+      final String? accessToken = await secureStorage.read(key: 'access_token');
 
       final response = await http.get(
         Uri.parse(
@@ -799,6 +792,16 @@ class AppointementService {
         final list = data["data"];
         return list is List ? list : [];
       }
+      if (response.statusCode == 401) {
+        final refreshed = await AuthService().getRefreshToken();
+        if (refreshed.success) {
+          return await fetchDoctors(
+            specialty: specialty,
+            skip: skip,
+            limit: limit,
+          );
+        }
+      }
       return [];
     } catch (e) {
       print('Network Error: $e');
@@ -808,8 +811,8 @@ class AppointementService {
 
   Future<Map<String, dynamic>?> getDoctor({required String id}) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final String? accessToken = prefs.getString('access_token');
+      const secureStorage = FlutterSecureStorage();
+      final String? accessToken = await secureStorage.read(key: 'access_token');
 
       final response = await http.get(
         Uri.parse('$_baseUrl/doctors/info/$id'),
@@ -826,15 +829,11 @@ class AppointementService {
         );
         return data['data'] as Map<String, dynamic>;
       }
-
       if (response.statusCode == 401) {
         final refreshed = await AuthService().getRefreshToken();
-        if (refreshed.success) {
-          return await getDoctor(id: id); // retry with new token
-        }
+        if (refreshed.success) return await getDoctor(id: id);
         return null;
       }
-
       return null;
     } catch (e) {
       print('Network Error: $e');
@@ -846,8 +845,8 @@ class AppointementService {
   //function to get all services with their price and description
   Future<List<dynamic>?> getServices({required String id}) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final String? accessToken = prefs.getString('access_token');
+      const secureStorage = FlutterSecureStorage();
+      final String? accessToken = await secureStorage.read(key: 'access_token');
 
       final response = await http.get(
         Uri.parse('$_baseUrl/doctors/$id/services'),
@@ -861,11 +860,10 @@ class AppointementService {
         final data = jsonDecode(response.body);
         print('services : $data');
         return List<dynamic>.from(data['data']);
-      } else if (response.statusCode == 401) {
+      }
+      if (response.statusCode == 401) {
         final refreshed = await AuthService().getRefreshToken();
-        if (refreshed.success) {
-          return await getServices(id: id);
-        }
+        if (refreshed.success) return await getServices(id: id);
         return null;
       }
       return null;
@@ -875,18 +873,13 @@ class AppointementService {
     }
   }
 
-  //check if the doctor is free :
   Future<Result> doctorIsFree({
     required String serviceId,
     required String date,
   }) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final String? accessToken = prefs.getString('access_token');
-
-      final uri = Uri.parse(
-        '$_baseUrl/doctors/is-free?service_id=$serviceId&date=$date',
-      );
+      const secureStorage = FlutterSecureStorage();
+      final String? accessToken = await secureStorage.read(key: 'access_token');
 
       final response = await http.get(
         Uri.parse('$_baseUrl/doctors/is-free?service_id=$serviceId&date=$date'),
@@ -907,7 +900,6 @@ class AppointementService {
           }
           return Result(success: false, message: 'Cannot appoint');
         }
-
         return Result(success: false, message: 'Unexpected response format');
       }
       if (response.statusCode == 401) {
@@ -927,8 +919,8 @@ class AppointementService {
   //get doctor time off
   Future<Result> doctorTimeOffs({required String id}) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final String? accessToken = prefs.getString('access_token');
+      const secureStorage = FlutterSecureStorage();
+      final String? accessToken = await secureStorage.read(key: 'access_token');
 
       final response = await http.get(
         Uri.parse('$_baseUrl/doctors/timeoffs'),
@@ -945,9 +937,7 @@ class AppointementService {
       }
       if (response.statusCode == 401) {
         final refreshed = await AuthService().getRefreshToken();
-        if (refreshed.success) {
-          return await doctorTimeOffs(id: id);
-        }
+        if (refreshed.success) return await doctorTimeOffs(id: id);
       }
       print('error: ${response.statusCode} - ${response.body}');
       return Result(success: false, message: 'Something went wrong');
@@ -964,8 +954,8 @@ class AppointementService {
     required String id,
   }) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final String? accessToken = prefs.getString('access_token');
+      const secureStorage = FlutterSecureStorage();
+      final String? accessToken = await secureStorage.read(key: 'access_token');
 
       final response = await http.post(
         Uri.parse('$_baseUrl/appointments/'),
@@ -980,10 +970,7 @@ class AppointementService {
         final data = jsonDecode(response.body);
         final url = data['data']?['url']?.toString();
         print('Payment URL: $url');
-        return Result(
-          success: true,
-          message: url ?? '',
-        ); // url stored in message field
+        return Result(success: true, message: url ?? '');
       }
       if (response.statusCode == 400) {
         final data = jsonDecode(response.body);
@@ -1012,12 +999,11 @@ class AppointementService {
   //Days of work
   Future<List<dynamic>> daysAndTimeOfWork({required String id}) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final String? accessToken = prefs.getString('access_token');
+      const secureStorage = FlutterSecureStorage();
+      final String? accessToken = await secureStorage.read(key: 'access_token');
 
       final response = await http.get(
-        // GET not POST
-        Uri.parse('$_baseUrl/doctors/$id/schedule'), // confirm URL with backend
+        Uri.parse('$_baseUrl/doctors/$id/schedule'),
         headers: {
           'Content-Type': 'application/json',
           if (accessToken != null) 'Authorization': 'Bearer $accessToken',
@@ -1041,14 +1027,13 @@ class AppointementService {
     }
   }
 
-  //Get user's appointments
   Future<List<dynamic>> getUserAppointment({
     required int page,
     required int limit,
   }) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final String? accessToken = prefs.getString('access_token');
+      const secureStorage = FlutterSecureStorage();
+      final String? accessToken = await secureStorage.read(key: 'access_token');
 
       final response = await http.get(
         Uri.parse(
@@ -1059,15 +1044,20 @@ class AppointementService {
           if (accessToken != null) 'Authorization': 'Bearer $accessToken',
         },
       );
+
       print(response.body);
       print(response.statusCode);
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final list = data["data"];
         return list is List ? list : [];
       }
       if (response.statusCode == 401) {
-        final result = AuthService().getRefreshToken();
+        final refreshed = await AuthService().getRefreshToken();
+        if (refreshed.success) {
+          return await getUserAppointment(page: page, limit: limit);
+        }
       }
       return [];
     } catch (e) {
@@ -1076,11 +1066,10 @@ class AppointementService {
     }
   }
 
-  // Cancel an appointment
   Future<Result> cancelAppointement({required String id}) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final String? accessToken = prefs.getString('access_token');
+      const secureStorage = FlutterSecureStorage();
+      final String? accessToken = await secureStorage.read(key: 'access_token');
 
       final response = await http.delete(
         Uri.parse('$_baseUrl/appointments/$id/cancel'),
@@ -1089,6 +1078,7 @@ class AppointementService {
           if (accessToken != null) 'Authorization': 'Bearer $accessToken',
         },
       );
+
       if (response.statusCode == 200 ||
           response.statusCode == 201 ||
           response.statusCode == 204) {
@@ -1096,12 +1086,15 @@ class AppointementService {
           success: true,
           message: "appointment canceled successfully",
         );
-      } else {
-        return Result(success: false, message: "Something went wrong");
       }
+      if (response.statusCode == 401) {
+        final refreshed = await AuthService().getRefreshToken();
+        if (refreshed.success) return await cancelAppointement(id: id);
+      }
+      return Result(success: false, message: "Something went wrong");
     } catch (e) {
       print('Something went wrong $e');
-      return Result(success: false, message: "something went wrong");
+      return Result(success: false, message: "Something went wrong");
     }
   }
 }
@@ -1113,8 +1106,8 @@ class UserServices {
   // Returns a Map containing the user data from the 'data' field of the response
   Future<Map<String, dynamic>> getUser() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final String? accessToken = prefs.getString('access_token');
+      const secureStorage = FlutterSecureStorage();
+      final String? accessToken = await secureStorage.read(key: 'access_token');
 
       final response = await http.get(
         Uri.parse('$_baseUrl/users/me'),
@@ -1127,31 +1120,32 @@ class UserServices {
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = json.decode(response.body);
         Map<String, dynamic> userData;
-        // Assuming the response structure contains a 'data' field with user info
+
         if (jsonResponse.containsKey('data') && jsonResponse['data'] is Map) {
           userData = jsonResponse['data'] as Map<String, dynamic>;
         } else {
-          // If no 'data' field, return the whole response (fallback)
           userData = jsonResponse;
         }
-        final secureStorage = const FlutterSecureStorage();
+
         final picture = userData['picture']?.toString() ?? '';
         await secureStorage.write(key: 'picture', value: picture);
         print('Picture saved from getUser: $picture');
 
         return userData;
-      } else {
-        // Handle non-200 responses
-        throw Exception(
-          'Failed to load user: ${response.statusCode} - ${response.body}',
-        );
       }
+
+      if (response.statusCode == 401) {
+        final refreshed = await AuthService().getRefreshToken();
+        if (refreshed.success) return await getUser();
+      }
+
+      throw Exception(
+        'Failed to load user: ${response.statusCode} - ${response.body}',
+      );
     } catch (e) {
-      // Re-throw or handle as needed
       throw Exception('Error fetching user: $e');
     }
   }
-  //Modify user information
 
   Future<bool> updateProfile({
     String? firstName,
@@ -1162,10 +1156,9 @@ class UserServices {
     String? dateOfBirth,
   }) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final String? accessToken = prefs.getString('access_token');
+      const secureStorage = FlutterSecureStorage();
+      final String? accessToken = await secureStorage.read(key: 'access_token');
 
-      // Only include fields that were actually provided
       final Map<String, dynamic> body = {};
       if (firstName != null) body['first_name'] = firstName;
       if (lastName != null) body['last_name'] = lastName;
@@ -1183,6 +1176,8 @@ class UserServices {
         body: jsonEncode(body),
       );
 
+      if (response.statusCode == 200) return true;
+
       if (response.statusCode == 401) {
         final refreshed = await AuthService().getRefreshToken();
         if (refreshed.success) {
@@ -1198,18 +1193,17 @@ class UserServices {
         return false;
       }
 
-      return response.statusCode == 200;
+      return false;
     } catch (e) {
       print('Update profile error: $e');
       return false;
     }
   }
 
-  //Upload profile picture
   Future<String?> uploadProfilePicture(File image) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final String? accessToken = prefs.getString('access_token');
+      const secureStorage = FlutterSecureStorage();
+      final String? accessToken = await secureStorage.read(key: 'access_token');
 
       final cloudinary = CloudinaryPublic('dc7qsxfpb', 'tcs7z4na');
       final cloudinaryResponse = await cloudinary.uploadFile(
@@ -1219,10 +1213,9 @@ class UserServices {
         ),
       );
 
-      final cloudinaryUrl =
-          cloudinaryResponse.secureUrl; // ← save before backend call
+      final cloudinaryUrl = cloudinaryResponse.secureUrl;
 
-      await http.post(
+      final response = await http.post(
         Uri.parse('$_baseUrl/users/profile'),
         headers: {
           'Content-Type': 'application/json',
@@ -1236,18 +1229,22 @@ class UserServices {
         }),
       );
 
-      return cloudinaryUrl; // ← always return Cloudinary URL regardless of backend
+      if (response.statusCode == 401) {
+        final refreshed = await AuthService().getRefreshToken();
+        if (refreshed.success) return await uploadProfilePicture(image);
+      }
+
+      return cloudinaryUrl;
     } catch (e) {
       print('Upload error: $e');
       return null;
     }
   }
 
-  //add phone numbe
   Future<bool> addPhoneNumber(String phoneNumber) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final String? accessToken = prefs.getString('access_token');
+      const secureStorage = FlutterSecureStorage();
+      final String? accessToken = await secureStorage.read(key: 'access_token');
 
       final response = await http.patch(
         Uri.parse('$_baseUrl/users/me'),
@@ -1255,15 +1252,19 @@ class UserServices {
           'Content-Type': 'application/json',
           if (accessToken != null) 'Authorization': 'Bearer $accessToken',
         },
-        body: jsonEncode({"phone": phoneNumber}), // was missing { }
+        body: jsonEncode({"phone": phoneNumber}),
       );
+
       if (response.statusCode == 200 || response.statusCode == 201) {
-        print('Phone added successfully ');
+        print('Phone added successfully');
         return true;
-      } else {
-        print('Something went wrong ${response.body}');
-        return false;
       }
+      if (response.statusCode == 401) {
+        final refreshed = await AuthService().getRefreshToken();
+        if (refreshed.success) return await addPhoneNumber(phoneNumber);
+      }
+      print('Something went wrong ${response.body}');
+      return false;
     } catch (e) {
       print("Something went wrong $e");
       return false;
@@ -1272,13 +1273,16 @@ class UserServices {
 }
 
 class ChatServices {
+  static final ChatServices _instance = ChatServices._internal();
+  factory ChatServices() => _instance;
+  ChatServices._internal();
   static const String _baseUrl = 'https://mediora-back-2.onrender.com';
 
   //Get contact with latest messages
   Future<List<dynamic>> getLatestContacts() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final String? accessToken = prefs.getString('access_token');
+      const secureStorage = FlutterSecureStorage();
+      final String? accessToken = await secureStorage.read(key: 'access_token');
 
       final response = await http.get(
         Uri.parse('$_baseUrl/chat/contacts/latest'),
@@ -1293,7 +1297,7 @@ class ChatServices {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        print("data of conevrsation : $data");
+        print("data of conversation : $data");
         return data is List ? data : [];
       }
       if (response.statusCode == 401) {
@@ -1307,11 +1311,10 @@ class ChatServices {
     }
   }
 
-  //get messages for a specific conversation
   Future<List<dynamic>> getConversationMessages(String id) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final String? accessToken = prefs.getString('access_token');
+      const secureStorage = FlutterSecureStorage();
+      final String? accessToken = await secureStorage.read(key: 'access_token');
 
       final response = await http.get(
         Uri.parse('$_baseUrl/chat/conversations/$id/messages'),
@@ -1340,16 +1343,13 @@ class ChatServices {
     }
   }
 
-  // ── WebSocket ─────────────────────────────────────────────────────────────
-
   static const String _wsBaseUrl = 'wss://mediora-back-2.onrender.com';
   WebSocketChannel? _channel;
 
-  // Connect to WebSocket
   Future<WebSocketChannel?> connectToChat() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final String? accessToken = prefs.getString('access_token');
+      const secureStorage = FlutterSecureStorage();
+      final String? accessToken = await secureStorage.read(key: 'access_token');
 
       if (accessToken == null) {
         print('WebSocket: no access token');

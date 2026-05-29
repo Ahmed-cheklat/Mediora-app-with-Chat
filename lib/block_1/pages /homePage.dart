@@ -40,6 +40,8 @@ class _HomepageState extends State<Homepage> {
   void initState() {
     super.initState();
     _initUser();
+    ChatServices().connectToChat();
+    print("Websocket : connected"); 
   }
 
   Future<void> _initUser() async {
@@ -53,6 +55,10 @@ class _HomepageState extends State<Homepage> {
   }
 
   Future<void> _saveUser(Map<String, dynamic> data) async {
+    await _secureStorage.write(
+      key: "user_id",
+      value: data['id']?.toString() ?? '',
+    );
     await _secureStorage.write(
       key: 'first_name',
       value: data['first_name']?.toString() ?? '',
@@ -347,7 +353,7 @@ class _HomepageBodyState extends State<HomepageBody> {
       context,
       MaterialPageRoute(
         builder: (_) => ChatPage(
-          conversationId:null ,
+          conversationId: null,
           doctorId: doctorId,
           doctorName: doctorName,
           avatarUrl: avatarUrl,

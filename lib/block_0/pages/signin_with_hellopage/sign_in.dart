@@ -163,11 +163,12 @@ class _SignInState extends State<SignIn> {
                     function: () async {
                       final result = await AuthService().googleSignIn();
                       if (result.success) {
-                        Navigator.pushReplacement(
+                        Navigator.pushAndRemoveUntil(
                           context,
                           MaterialPageRoute(
                             builder: (context) => const   Homepage(),
                           ),
+                          (route) => false,
                         );
                       } else {
                         CustomSnackBarForSignIn.show(
@@ -450,16 +451,32 @@ class _SignInButtonState extends State<SignInButton> {
 }
 
 // SignIn with Google Button
-class SignInWithGoogleButton extends StatelessWidget {
+class SignInWithGoogleButton extends StatefulWidget {
   final Future<void> Function() function;
   const SignInWithGoogleButton({super.key, required this.function});
+
+  @override
+  State<SignInWithGoogleButton> createState() => _SignInWithGoogleButtonState();
+}
+
+class _SignInWithGoogleButtonState extends State<SignInWithGoogleButton> {
+  bool _isLoading = false;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: function,
+        onPressed: _isLoading
+            ? null
+            : () async {
+                setState(() => _isLoading = true);
+                try {
+                  await widget.function();
+                } finally {
+                  if (mounted) setState(() => _isLoading = false);
+                }
+              },
         style: ElevatedButton.styleFrom(
           backgroundColor: Color(0xFFDBDADA),
           foregroundColor: Colors.white,
@@ -469,22 +486,31 @@ class SignInWithGoogleButton extends StatelessWidget {
           ),
           elevation: 10,
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Image.asset("assets/google_icon.png", height: 24.r, width: 24.r),
-            8.horizontalSpace,
-            Text(
-              'Sign in with Google',
-              style: TextStyle(
-                fontSize: 16.sp,
-                color: Colors.black,
-                fontFamily: "LineSeedJP",
-                fontWeight: FontWeight.w400,
+        child: _isLoading
+            ? SizedBox(
+                height: 20.r,
+                width: 20.r,
+                child: const CircularProgressIndicator(
+                  color: Colors.black54,
+                  strokeWidth: 2.5,
+                ),
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Image.asset("assets/google_icon.png", height: 24.r, width: 24.r),
+                  8.horizontalSpace,
+                  Text(
+                    'Sign in with Google',
+                    style: TextStyle(
+                      fontSize: 16.sp,
+                      color: Colors.black,
+                      fontFamily: "LineSeedJP",
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
-        ),
       ),
     );
   }

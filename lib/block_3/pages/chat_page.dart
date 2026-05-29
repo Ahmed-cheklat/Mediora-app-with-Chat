@@ -1,12 +1,22 @@
+import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:mediora/Network/networkServices.dart';
 
 class ChatPage extends StatefulWidget {
   final String doctorName;
-  final String doctorId; 
-  final String? conversationId; 
+  final String doctorId;
+  final String? conversationId;
   final String? avatarUrl;
 
-  const ChatPage({super.key, required this.doctorName, this.avatarUrl,required this.doctorId, this.conversationId });
+  const ChatPage({
+    super.key,
+    required this.doctorName,
+    this.avatarUrl,
+    required this.doctorId,
+    this.conversationId,
+  });
 
   @override
   State<ChatPage> createState() => _ChatPageState();
@@ -15,39 +25,180 @@ class ChatPage extends StatefulWidget {
 class _ChatPageState extends State<ChatPage> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  final List<_ChatMessage> _messages = [
-    _ChatMessage(
-      text:
-          "Hello! I reviewed your file before our appointment. Do you have any questions?",
-      isMe: false,
-      time: "10:24 AM",
-    ),
-    _ChatMessage(
-      text: "Yes, I wanted to ask about the medication dosage you prescribed.",
-      isMe: true,
-      time: "10:26 AM",
-    ),
-    _ChatMessage(
-      text:
-          "Of course! Take it once daily in the morning with food. Avoid taking it on an empty stomach.",
-      isMe: false,
-      time: "10:27 AM",
-    ),
-  ];
+  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
 
+  final List<_ChatMessage> _messages = [];
+  StreamSubscription? _subscription;
+  String? _currentUserId;
+  bool _isLoadingHistory = true;
+  bool _isDoctorTyping = false;
+  Timer? _typingTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCurrentUser();
+    _loadHistory();
+    _listenToMessages();
+  }
+
+  // ── load current user id to know which bubble is "me" ──
+  Future<void> _loadCurrentUser() async {
+    final id = await _secureStorage.read(key: 'user_id');
+    if (mounted) setState(() => _currentUserId = id);
+  }
+
+  // ── load message history via REST ──
+  Future<void> _loadHistory() async {
+    if (widget.conversationId == null) {
+      if (mounted) setState(() => _isLoadingHistory = false);
+      return;
+    }
+    final data = await ChatServices().getConversationMessages(
+      widget.conversationId!,
+    );
+    if (!mounted) return;
+
+    final List<_ChatMessage> history = data.map((item) {
+      final msg = item as Map<String, dynamic>;
+      final String senderId = msg['sender_id']?.toString() ?? '';
+      final bool isMe = senderId == _currentUserId;
+      final String body = msg['body']?.toString() ?? '';
+      final String createdAt = msg['created_at']?.toString() ?? '';
+      final String messageId = msg['message_id']?.toString() ?? '';
+      return _ChatMessage(
+        id: messageId,
+        text: body,
+        isMe: isMe,
+        time: _formatTime(createdAt),
+        isRead: false,
+      );
+    }).toList();
+
+    setState(() {
+      _messages.addAll(history);
+      _isLoadingHistory = false;
+    });
+
+    // send read receipt for last message
+    if (history.isNotEmpty && widget.conversationId != null) {
+      ChatServices().sendReadReceipt(
+        conversationId: widget.conversationId!,
+        messageId: history.last.id,
+      );
+    }
+
+    _scrollToBottom();
+  }
+
+  // ── listen to WebSocket stream ──
+  void _listenToMessages() {
+    _subscription = ChatServices().messageStream?.listen((data) {
+      if (!mounted) return;
+      try {
+        final json = jsonDecode(data as String) as Map<String, dynamic>;
+        final String type = json['type']?.toString() ?? '';
+
+        if (type == 'message') {
+          final String convId = json['conv_id']?.toString() ?? '';
+          // only handle messages for this conversation
+          if (widget.conversationId != null &&
+              convId != widget.conversationId) return;
+
+          final String senderId = json['sender_id']?.toString() ?? '';
+          final bool isMe = senderId == _currentUserId;
+          final String body = json['body']?.toString() ?? '';
+          final String createdAt = json['created_at']?.toString() ?? '';
+          final String messageId = json['message_id']?.toString() ?? '';
+
+          setState(() {
+            _isDoctorTyping = false;
+            _messages.add(_ChatMessage(
+              id: messageId,
+              text: body,
+              isMe: isMe,
+              time: _formatTime(createdAt),
+              isRead: false,
+            ));
+          });
+
+          // send read receipt for incoming message
+          if (!isMe && widget.conversationId != null) {
+            ChatServices().sendReadReceipt(
+              conversationId: widget.conversationId!,
+              messageId: messageId,
+            );
+          }
+
+          _scrollToBottom();
+        } else if (type == 'typing') {
+          final String userId = json['user_id']?.toString() ?? '';
+          // show typing only if it's the doctor typing, not us
+          if (userId != _currentUserId) {
+            setState(() => _isDoctorTyping = true);
+            // auto-hide after 3 seconds if no new typing event
+            _typingTimer?.cancel();
+            _typingTimer = Timer(const Duration(seconds: 3), () {
+              if (mounted) setState(() => _isDoctorTyping = false);
+            });
+          }
+        } else if (type == 'read') {
+          final String messageId = json['message_id']?.toString() ?? '';
+          setState(() {
+            final index = _messages.indexWhere((m) => m.id == messageId);
+            if (index != -1) {
+              _messages[index] = _messages[index].copyWith(isRead: true);
+            }
+          });
+        }
+      } catch (e) {
+        print('WebSocket parse error: $e');
+      }
+    });
+  }
+
+  // ── send message ──
   void _sendMessage() {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
+    if (widget.conversationId == null) return;
+
+    // add bubble immediately (optimistic)
     setState(() {
-      _messages.add(_ChatMessage(text: text, isMe: true, time: _currentTime()));
+      _messages.add(_ChatMessage(
+        id: '',
+        text: text,
+        isMe: true,
+        time: _currentTime(),
+        isRead: false,
+      ));
     });
+
     _controller.clear();
+    _scrollToBottom();
+
+    // send over WebSocket
+    ChatServices().sendMessage(
+      conversationId: widget.conversationId!,
+      message: text,
+    );
+  }
+
+  // ── send typing indicator while user types ──
+  void _onTextChanged(String value) {
+    if (widget.conversationId == null) return;
+    ChatServices().sendTyping(conversationId: widget.conversationId!);
+  }
+
+  void _scrollToBottom() {
     Future.delayed(const Duration(milliseconds: 100), () {
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
     });
   }
 
@@ -59,8 +210,19 @@ class _ChatPageState extends State<ChatPage> {
     return '$h:$m $ampm';
   }
 
+  String _formatTime(String isoString) {
+    final dt = DateTime.tryParse(isoString);
+    if (dt == null) return '';
+    final h = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
+    final m = dt.minute.toString().padLeft(2, '0');
+    final ampm = dt.hour >= 12 ? 'PM' : 'AM';
+    return '$h:$m $ampm';
+  }
+
   @override
   void dispose() {
+    _subscription?.cancel(); // stop listening — but WebSocket stays open
+    _typingTimer?.cancel();
     _controller.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -68,28 +230,30 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6FA),
-      appBar: _buildAppBar(context),
+      backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFF5F6FA),
+      appBar: _buildAppBar(context, isDark),
       body: Column(
         children: [
-          Expanded(child: _buildMessagesList()),
-          _buildInputBar(),
+          Expanded(child: _buildMessagesList(isDark)),
+          if (_isDoctorTyping) _buildTypingIndicator(isDark),
+          _buildInputBar(isDark),
         ],
       ),
     );
   }
 
-  PreferredSizeWidget _buildAppBar(BuildContext context) {
+  PreferredSizeWidget _buildAppBar(BuildContext context, bool isDark) {
     return AppBar(
-      backgroundColor: Colors.white,
+      backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
       elevation: 0,
       titleSpacing: 0,
       leading: IconButton(
-        icon: const Icon(
+        icon: Icon(
           Icons.chevron_left_rounded,
           size: 28,
-          color: Color(0xFF555B72),
+          color: isDark ? Colors.white70 : const Color(0xFF555B72),
         ),
         onPressed: () => Navigator.pop(context),
       ),
@@ -123,7 +287,10 @@ class _ChatPageState extends State<ChatPage> {
                   decoration: BoxDecoration(
                     color: const Color(0xFF2DD4A0),
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
+                    border: Border.all(
+                      color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                      width: 2,
+                    ),
                   ),
                 ),
               ),
@@ -136,15 +303,15 @@ class _ChatPageState extends State<ChatPage> {
               children: [
                 Text(
                   widget.doctorName,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF1A1D23),
+                    color: isDark ? Colors.white : const Color(0xFF1A1D23),
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
                 const Text(
-                  'Online now',
+                  'Online',
                   style: TextStyle(
                     fontSize: 11,
                     color: Color(0xFF2DD4A0),
@@ -157,80 +324,110 @@ class _ChatPageState extends State<ChatPage> {
         ],
       ),
       actions: [
-        _AppBarIconBtn(icon: Icons.phone_outlined, onTap: () {}),
-        _AppBarIconBtn(icon: Icons.more_vert_rounded, onTap: () {}),
+        _AppBarIconBtn(
+          icon: Icons.more_vert_rounded,
+          onTap: () {},
+          isDark: isDark,
+        ),
         const SizedBox(width: 8),
       ],
       bottom: PreferredSize(
         preferredSize: const Size.fromHeight(0.5),
-        child: Container(color: const Color(0xFFEBEBEB), height: 0.5),
+        child: Container(
+          color: isDark ? Colors.white12 : const Color(0xFFEBEBEB),
+          height: 0.5,
+        ),
       ),
     );
   }
 
-  Widget _buildMessagesList() {
+  Widget _buildMessagesList(bool isDark) {
+    if (_isLoadingHistory) {
+      return const Center(
+        child: CircularProgressIndicator(color: Color(0xFF4C6EF5)),
+      );
+    }
     return ListView.builder(
       controller: _scrollController,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-      itemCount: _messages.length + 1, // +1 for date divider at top
+      itemCount: _messages.length + 1,
       itemBuilder: (context, index) {
-        if (index == 0) {
-          return const _DateDivider(label: 'Today');
-        }
+        if (index == 0) return const _DateDivider(label: 'Today');
         final msg = _messages[index - 1];
-        return _MessageBubble(message: msg);
+        return _MessageBubble(message: msg, isDark: isDark);
       },
     );
   }
 
-  Widget _buildInputBar() {
+  Widget _buildTypingIndicator(bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 16, bottom: 4),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 13,
+            backgroundColor: const Color(0xFF4C6EF5),
+            child: Text(
+              _initials(widget.doctorName),
+              style: const TextStyle(fontSize: 8, color: Colors.white),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF2A2A2A) : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Text(
+              'typing...',
+              style: TextStyle(
+                fontSize: 12,
+                color: isDark ? Colors.white54 : Colors.grey[500],
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInputBar(bool isDark) {
     return Container(
-      color: Colors.white,
+      color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: SafeArea(
         child: Row(
           children: [
-            _CircleIconBtn(icon: Icons.attach_file_rounded, onTap: () {}),
-            const SizedBox(width: 8),
             Expanded(
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 8,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF5F6FA),
+                  color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF5F6FA),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFFEBEBEB)),
+                  border: Border.all(
+                    color: isDark ? Colors.white12 : const Color(0xFFEBEBEB),
+                  ),
                 ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _controller,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: Color(0xFF1A1D23),
-                        ),
-                        decoration: const InputDecoration.collapsed(
-                          hintText: 'Type a message…',
-                          hintStyle: TextStyle(
-                            color: Color(0xFF999EAE),
-                            fontSize: 13,
-                          ),
-                        ),
-                        textInputAction: TextInputAction.send,
-                        onSubmitted: (_) => _sendMessage(),
-                        maxLines: 4,
-                        minLines: 1,
-                      ),
+                child: TextField(
+                  controller: _controller,
+                  onChanged: _onTextChanged,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isDark ? Colors.white : const Color(0xFF1A1D23),
+                  ),
+                  decoration: InputDecoration.collapsed(
+                    hintText: 'Type a message…',
+                    hintStyle: TextStyle(
+                      color: isDark ? Colors.white38 : const Color(0xFF999EAE),
+                      fontSize: 13,
                     ),
-                    const SizedBox(width: 6),
-                    GestureDetector(
-                      onTap: () {},
-                      child: const Text('😊', style: TextStyle(fontSize: 18)),
-                    ),
-                  ],
+                  ),
+                  textInputAction: TextInputAction.send,
+                  onSubmitted: (_) => _sendMessage(),
+                  maxLines: 4,
+                  minLines: 1,
                 ),
               ),
             ),
@@ -251,11 +448,7 @@ class _ChatPageState extends State<ChatPage> {
                     ),
                   ],
                 ),
-                child: const Icon(
-                  Icons.send_rounded,
-                  color: Colors.white,
-                  size: 16,
-                ),
+                child: const Icon(Icons.send_rounded, color: Colors.white, size: 16),
               ),
             ),
           ],
@@ -267,44 +460,58 @@ class _ChatPageState extends State<ChatPage> {
   String _initials(String name) {
     final parts = name.trim().split(' ');
     if (parts.length >= 2) return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
-    return name.substring(0, 2).toUpperCase();
+    if (name.length >= 2) return name.substring(0, 2).toUpperCase();
+    return '?';
   }
 }
 
-// ── Data model ──────────────────────────────────────────────────────────────
+// ── Data model ────────────────────────────────────────────────────────────────
 
 class _ChatMessage {
+  final String id;
   final String text;
   final bool isMe;
   final String time;
+  final bool isRead;
+
   const _ChatMessage({
+    required this.id,
     required this.text,
     required this.isMe,
     required this.time,
+    required this.isRead,
   });
+
+  _ChatMessage copyWith({bool? isRead}) => _ChatMessage(
+        id: id,
+        text: text,
+        isMe: isMe,
+        time: time,
+        isRead: isRead ?? this.isRead,
+      );
 }
 
-// ── Sub-widgets ──────────────────────────────────────────────────────────────
+// ── Sub-widgets ───────────────────────────────────────────────────────────────
 
 class _MessageBubble extends StatelessWidget {
   final _ChatMessage message;
-  const _MessageBubble({required this.message});
+  final bool isDark;
+  const _MessageBubble({required this.message, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
-        mainAxisAlignment: message.isMe
-            ? MainAxisAlignment.end
-            : MainAxisAlignment.start,
+        mainAxisAlignment:
+            message.isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           if (!message.isMe) ...[
-            const CircleAvatar(
+            CircleAvatar(
               radius: 13,
-              backgroundColor: Color(0xFF4C6EF5),
-              child: Text(
+              backgroundColor: const Color(0xFF4C6EF5),
+              child: const Text(
                 'DR',
                 style: TextStyle(
                   fontSize: 8,
@@ -319,7 +526,11 @@ class _MessageBubble extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
               decoration: BoxDecoration(
-                color: message.isMe ? const Color(0xFF4C6EF5) : Colors.white,
+                color: message.isMe
+                    ? const Color(0xFF4C6EF5)
+                    : isDark
+                        ? const Color(0xFF2A2A2A)
+                        : Colors.white,
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(18),
                   topRight: const Radius.circular(18),
@@ -344,32 +555,42 @@ class _MessageBubble extends StatelessWidget {
                       fontSize: 13,
                       color: message.isMe
                           ? Colors.white
-                          : const Color(0xFF1A1D23),
+                          : isDark
+                              ? Colors.white
+                              : const Color(0xFF1A1D23),
                       height: 1.5,
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    message.time,
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: message.isMe
-                          ? Colors.white.withOpacity(0.65)
-                          : const Color(0xFF999EAE),
-                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        message.time,
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: message.isMe
+                              ? Colors.white.withOpacity(0.65)
+                              : const Color(0xFF999EAE),
+                        ),
+                      ),
+                      if (message.isMe) ...[
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.done_all_rounded,
+                          size: 14,
+                          // blue if read, grey if not
+                          color: message.isRead
+                              ? Colors.lightBlueAccent
+                              : Colors.white.withOpacity(0.65),
+                        ),
+                      ],
+                    ],
                   ),
                 ],
               ),
             ),
           ),
-          if (message.isMe) ...[
-            const SizedBox(width: 4),
-            const Icon(
-              Icons.done_all_rounded,
-              size: 14,
-              color: Color(0xFF4C6EF5),
-            ),
-          ],
         ],
       ),
     );
@@ -401,7 +622,12 @@ class _DateDivider extends StatelessWidget {
 class _AppBarIconBtn extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
-  const _AppBarIconBtn({required this.icon, required this.onTap});
+  final bool isDark;
+  const _AppBarIconBtn({
+    required this.icon,
+    required this.onTap,
+    required this.isDark,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -412,32 +638,14 @@ class _AppBarIconBtn extends StatelessWidget {
         height: 32,
         margin: const EdgeInsets.only(right: 4),
         decoration: BoxDecoration(
-          color: const Color(0xFFF0F2F8),
+          color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF0F2F8),
           shape: BoxShape.circle,
         ),
-        child: Icon(icon, size: 16, color: const Color(0xFF555B72)),
-      ),
-    );
-  }
-}
-
-class _CircleIconBtn extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-  const _CircleIconBtn({required this.icon, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 34,
-        height: 34,
-        decoration: BoxDecoration(
-          color: const Color(0xFFF0F2F8),
-          shape: BoxShape.circle,
+        child: Icon(
+          icon,
+          size: 16,
+          color: isDark ? Colors.white70 : const Color(0xFF555B72),
         ),
-        child: Icon(icon, size: 18, color: const Color(0xFF555B72)),
       ),
     );
   }

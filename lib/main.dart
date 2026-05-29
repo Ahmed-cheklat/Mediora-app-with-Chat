@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:mediora/block_0/pages/signin_with_hellopage/start_page.dart';
+import 'package:mediora/block_1/pages%20/homePage.dart';
 import 'package:mediora/block_4/tools/notifications.dart';
 import 'package:mediora/block_4/tools/themeProvider.dart';
 import 'package:provider/provider.dart';
@@ -13,17 +15,26 @@ void main() async {
   await GoogleSignIn.instance.initialize(
     clientId: '583663368113-vmset5bjhiu86qigf3aur6qaf68sg2u5.apps.googleusercontent.com',
   );
+
+  // theme stays in SharedPreferences
   final prefs = await SharedPreferences.getInstance();
+
+  // auth check uses SecureStorage
+  const secureStorage = FlutterSecureStorage();
+  final String? accessToken = await secureStorage.read(key: 'access_token');
+  final bool isLoggedIn = accessToken != null;
+
   runApp(
     ChangeNotifierProvider(
       create: (_) => ThemeProvider(prefs),
-      child: const MyApp(),
+      child: MyApp(isLoggedIn: isLoggedIn),
     ),
   );
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final bool isLoggedIn;
+  const MyApp({super.key, required this.isLoggedIn});
 
   @override
   Widget build(BuildContext context) {
@@ -77,11 +88,11 @@ class MyApp extends StatelessWidget {
             iconTheme: const IconThemeData(color: Color(0xFF2463EB)),
             colorScheme: const ColorScheme.dark(
               primary: Color(0xFF2463EB),
-              surface: const Color(0xFF1E1E1E),
+              surface: Color(0xFF1E1E1E),
             ),
           ),
           debugShowCheckedModeBanner: false,
-          home: const StartPage(),
+          home: isLoggedIn ? Homepage() : const StartPage(),
         ),
       ),
     );

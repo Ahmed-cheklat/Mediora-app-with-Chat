@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:mediora/block_0/pages/sign_up/set_a_password_for_sign_up.dart';
-import 'package:mediora/block_2/pages/invoice_page.dart';
+import 'package:mediora/block_1/pages%20/homePage.dart';
 import 'package:mediora/Network/networkServices.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -87,15 +87,15 @@ class _BookAndPayPageState extends State<BookAndPayPage> {
   final days = _next7Days;
   final selectedDate = days[_selectedDayIndex];
 
-  print('Selected date: $selectedDate');
-  print('Selected weekday (Flutter): ${selectedDate.weekday}');
-  print('Converted API dow: ${_toApiDow(selectedDate)}');
-  print('Schedule map keys: ${_scheduleMap.keys.toList()}');
-  print('Date sent to API: ${selectedDate.toIso8601String().split('T').first}');
+  // print('Selected date: $selectedDate');
+  // print('Selected weekday (Flutter): ${selectedDate.weekday}');
+  // print('Converted API dow: ${_toApiDow(selectedDate)}');
+  // print('Schedule map keys: ${_scheduleMap.keys.toList()}');
+  // print('Date sent to API: ${selectedDate.toIso8601String().split('T').first}');
 
-  print('serviceId: ${widget.consultation['id']}');
-  print('doctorId: ${widget.doctor['id']}');
-  print('date: ${selectedDate.toIso8601String().split('T').first}');
+  // print('serviceId: ${widget.consultation['id']}');
+  // print('doctorId: ${widget.doctor['id']}');
+  // print('date: ${selectedDate.toIso8601String().split('T').first}');
 
   setState(() => _isConfirming = true);
   try {
@@ -154,18 +154,15 @@ class _BookAndPayPageState extends State<BookAndPayPage> {
     if (!mounted) return;
 
     // 4. Navigate to invoice
-    final user = await UserServices().getUser();
     if (!mounted) return;
 
-    Navigator.push(
+    Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(
-        builder: (context) => InvoicePage(
-          doctor: widget.doctor,
-          patient: user,
-          selectedDate: selectedDate,
+        builder: (context) => Homepage(
         ),
       ),
+      (route) => false,
     );
   } catch (e) {
     if (!mounted) return;
