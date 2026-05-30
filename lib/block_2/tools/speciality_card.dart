@@ -10,7 +10,7 @@ final List<Map<String, dynamic>> specialties = [
   {"specialty": "urology", "icon": HealthIcons.urologyFilled},
   {"specialty": "neurology", "icon": HealthIcons.neurologyFilled},
   {"specialty": "nephrology", "icon": HealthIcons.urologyFilled},
-  {"specialty": "oRL", "icon": HealthIcons.earFilled},
+  {"specialty": "ORL", "icon": HealthIcons.earFilled},
   {"specialty": "ophthalmology", "icon": HealthIcons.eyeFilled},
   {"specialty": "endocrinology", "icon": HealthIcons.stomachFilled},
   {"specialty": "dermatology", "icon": HealthIcons.allergiesFilled},

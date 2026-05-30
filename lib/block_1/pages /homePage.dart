@@ -5,7 +5,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:mediora/advices.dart';
 import 'package:mediora/block_1/tools/appointement_card.dart';
-import 'package:mediora/block_3/pages/chat_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mediora/Network/networkServices.dart';
 import 'package:mediora/block_2/pages/specialites_page.dart';
@@ -41,13 +40,23 @@ class _HomepageState extends State<Homepage> {
     super.initState();
     _initUser();
     ChatServices().connectToChat();
-    print("Websocket : connected"); 
+    print("Websocket : connected");
   }
 
   Future<void> _initUser() async {
+    final oldPic = await _secureStorage.read(key: 'picture');
     try {
       final data = await UserServices().getUser();
       await _saveUser(data);
+      final newPic = await _secureStorage.read(key: 'picture');
+      if ((newPic == null ||
+              !newPic.startsWith('http') ||
+              newPic == 'string') &&
+          oldPic != null &&
+          oldPic.startsWith('http') &&
+          oldPic != 'string') {
+        await _secureStorage.write(key: 'picture', value: oldPic);
+      }
       await _readUser();
     } catch (e) {
       await _readUser();
@@ -338,29 +347,7 @@ class _HomepageBodyState extends State<HomepageBody> {
     }
   }
 
-  void _onMessage(BuildContext context, Map<String, dynamic> appointment) {
-    final doctor = appointment['doctor'] as Map<String, dynamic>? ?? {};
-    final String doctorId = doctor['id']?.toString() ?? '';
-    final String doctorName =
-        '${doctor['first_name'] ?? ''} ${doctor['last_name'] ?? ''}'.trim();
-    final String? avatarUrl = doctor['picture']?.toString();
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => ConversationsPage()),
-    );
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ChatPage(
-          conversationId: null,
-          doctorId: doctorId,
-          doctorName: doctorName,
-          avatarUrl: avatarUrl,
-        ),
-      ),
-    );
-  }
+  
 
   @override
   Widget build(BuildContext context) {
@@ -387,7 +374,6 @@ class _HomepageBodyState extends State<HomepageBody> {
               (appointment) => AppointmentCard(
                 appointment: appointment as Map<String, dynamic>,
                 onCancel: _cancelAppointment,
-                onMessage: _onMessage,
               ),
             ),
           ] else ...[

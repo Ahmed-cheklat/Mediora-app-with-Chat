@@ -16,7 +16,6 @@ void main() async {
     clientId: '583663368113-vmset5bjhiu86qigf3aur6qaf68sg2u5.apps.googleusercontent.com',
   );
 
-  // theme stays in SharedPreferences
   final prefs = await SharedPreferences.getInstance();
 
   // auth check uses SecureStorage

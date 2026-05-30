@@ -104,76 +104,79 @@ class _EditProfilePageState extends State<EditProfilePage> {
       setState(() => _isSaving = true);
 
       try {
-        // 1. Update text profile first
-        final success = await UserServices().updateProfile(
-          firstName: _firstNameEditable ? _firstNameController.text.trim() : null,
-          lastName: _lastNameEditable ? _lastNameController.text.trim() : null,
-          username: _usernameEditable ? _usernameController.text.trim() : null,
-          gender: _selectedGender,
-          dateOfBirth: _selectedDob != null
-              ? '${_selectedDob!.year}-${_selectedDob!.month.toString().padLeft(2, '0')}-${_selectedDob!.day.toString().padLeft(2, '0')}'
-              : null,
-        );
+        final hasTextChanges = _firstNameEditable || _lastNameEditable ||
+            _usernameEditable || _selectedGender != null || _selectedDob != null;
 
-        if (!mounted) return;
+        if (hasTextChanges) {
+          final success = await UserServices().updateProfile(
+            firstName: _firstNameEditable ? _firstNameController.text.trim() : null,
+            lastName: _lastNameEditable ? _lastNameController.text.trim() : null,
+            username: _usernameEditable ? _usernameController.text.trim() : null,
+            gender: _selectedGender,
+            dateOfBirth: _selectedDob != null
+                ? '${_selectedDob!.year}-${_selectedDob!.month.toString().padLeft(2, '0')}-${_selectedDob!.day.toString().padLeft(2, '0')}'
+                : null,
+          );
 
-        if (success) {
-          // 2. Save text fields to storage
+          if (!mounted) return;
+
+          if (!success) {
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Row(children: [
+                  Icon(Icons.error_outline, color: Colors.white),
+                  SizedBox(width: 10),
+                  Text('Failed to update profile'),
+                ]),
+                backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            );
+            return;
+          }
+
           if (_firstNameEditable) await _secureStorage.write(key: 'first_name', value: _firstNameController.text.trim());
           if (_lastNameEditable) await _secureStorage.write(key: 'last_name', value: _lastNameController.text.trim());
           if (_usernameEditable) await _secureStorage.write(key: 'username', value: _usernameController.text.trim());
           if (_selectedGender != null) await _secureStorage.write(key: 'gender', value: _selectedGender!);
           if (_selectedDob != null) await _secureStorage.write(key: 'date_of_birth', value: _selectedDob!.toIso8601String());
-
-          // 3. Upload picture separately if picked
-          if (_pickedImage != null) {
-            final cloudinaryUrl = await UserServices().uploadProfilePicture(_pickedImage!);
-            if (cloudinaryUrl != null && mounted) {
-              await _secureStorage.write(key: 'picture', value: cloudinaryUrl);
-              setState(() {
-                _pictureUrl = cloudinaryUrl;
-                _pickedImage = null;
-              });
-            }
-          }
-
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Row(children: [
-                Icon(Icons.check_circle, color: Colors.white),
-                SizedBox(width: 10),
-                Text('Profile updated successfully'),
-              ]),
-              backgroundColor: Colors.green,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-          );
-
-          setState(() {
-            _firstNameEditable = false;
-            _lastNameEditable = false;
-            _usernameEditable = false;
-          });
-
-          await Future.delayed(const Duration(seconds: 1));
-          if (mounted) Navigator.pop(context);
-        } else {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Row(children: [
-                Icon(Icons.error_outline, color: Colors.white),
-                SizedBox(width: 10),
-                Text('Failed to update profile'),
-              ]),
-              backgroundColor: Colors.red,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-          );
         }
+
+        if (_pickedImage != null) {
+          final cloudinaryUrl = await UserServices().uploadProfilePicture(_pickedImage!);
+          if (cloudinaryUrl != null && mounted) {
+            await _secureStorage.write(key: 'picture', value: cloudinaryUrl);
+            setState(() {
+              _pictureUrl = cloudinaryUrl;
+              _pickedImage = null;
+            });
+          }
+        }
+
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(children: [
+              Icon(Icons.check_circle, color: Colors.white),
+              SizedBox(width: 10),
+              Text('Profile updated successfully'),
+            ]),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+
+        setState(() {
+          _firstNameEditable = false;
+          _lastNameEditable = false;
+          _usernameEditable = false;
+        });
+
+        await Future.delayed(const Duration(seconds: 1));
+        if (mounted) Navigator.pop(context);
       } finally {
         if (mounted) setState(() => _isSaving = false);
       }

@@ -4,13 +4,11 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 class AppointmentCard extends StatelessWidget {
   final Map<String, dynamic> appointment;
   final void Function(String appointmentId) onCancel;
-  final void Function(BuildContext context, Map<String, dynamic> appointment) onMessage;
 
   const AppointmentCard({
     super.key,
     required this.appointment,
     required this.onCancel,
-    required this.onMessage,
   });
 
   @override
@@ -97,26 +95,8 @@ class AppointmentCard extends StatelessWidget {
                   date,
                   style: TextStyle(fontSize: 13.sp, color: Colors.grey[600]),
                 ),
-                const Spacer(),
-                SizedBox(
-                  height: 34.h,
-                  child: OutlinedButton(
-                    onPressed: () => onMessage(context,appointment),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF2463EB),
-                      side: const BorderSide(color: Color(0xFF2463EB)),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10.r),
-                      ),
-                      padding: EdgeInsets.symmetric(horizontal: 16.w),
-                    ),
-                    child: Text(
-                      'Message',
-                      style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ),
-                SizedBox(width: 8.w),
+                //SizedBox(width: 8.w),
+                const Spacer(), 
                 SizedBox(
                   height: 34.h,
                   child: OutlinedButton(

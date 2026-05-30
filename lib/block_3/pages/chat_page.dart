@@ -5,17 +5,19 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:mediora/Network/networkServices.dart';
 
 class ChatPage extends StatefulWidget {
-  final String doctorName;
+  final String firstName;
+  final String? lastName;
   final String doctorId;
   final String? conversationId;
   final String? avatarUrl;
 
   const ChatPage({
     super.key,
-    required this.doctorName,
-    this.avatarUrl,
+    required this.firstName,
+    this.lastName,
     required this.doctorId,
     this.conversationId,
+    this.avatarUrl,
   });
 
   @override
@@ -34,6 +36,20 @@ class _ChatPageState extends State<ChatPage> {
   bool _isDoctorTyping = false;
   Timer? _typingTimer;
 
+  String get _displayName {
+    final last = widget.lastName;
+    if (last != null && last.isNotEmpty) return '${widget.firstName} $last';
+    return widget.firstName;
+  }
+
+  String get _initials {
+    final first = widget.firstName.trim();
+    final last = widget.lastName?.trim() ?? '';
+    if (last.isNotEmpty) return '${first[0]}${last[0]}'.toUpperCase();
+    if (first.length >= 2) return first.substring(0, 2).toUpperCase();
+    return first[0].toUpperCase();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -42,21 +58,17 @@ class _ChatPageState extends State<ChatPage> {
     _listenToMessages();
   }
 
-  // ── load current user id to know which bubble is "me" ──
   Future<void> _loadCurrentUser() async {
     final id = await _secureStorage.read(key: 'user_id');
     if (mounted) setState(() => _currentUserId = id);
   }
 
-  // ── load message history via REST ──
   Future<void> _loadHistory() async {
     if (widget.conversationId == null) {
       if (mounted) setState(() => _isLoadingHistory = false);
       return;
     }
-    final data = await ChatServices().getConversationMessages(
-      widget.conversationId!,
-    );
+    final data = await ChatServices().getConversationMessages(widget.conversationId!);
     if (!mounted) return;
 
     final List<_ChatMessage> history = data.map((item) {
@@ -80,7 +92,6 @@ class _ChatPageState extends State<ChatPage> {
       _isLoadingHistory = false;
     });
 
-    // send read receipt for last message
     if (history.isNotEmpty && widget.conversationId != null) {
       ChatServices().sendReadReceipt(
         conversationId: widget.conversationId!,
@@ -91,7 +102,6 @@ class _ChatPageState extends State<ChatPage> {
     _scrollToBottom();
   }
 
-  // ── listen to WebSocket stream ──
   void _listenToMessages() {
     _subscription = ChatServices().messageStream?.listen((data) {
       if (!mounted) return;
@@ -101,9 +111,7 @@ class _ChatPageState extends State<ChatPage> {
 
         if (type == 'message') {
           final String convId = json['conv_id']?.toString() ?? '';
-          // only handle messages for this conversation
-          if (widget.conversationId != null &&
-              convId != widget.conversationId) return;
+          if (widget.conversationId != null && convId != widget.conversationId) return;
 
           final String senderId = json['sender_id']?.toString() ?? '';
           final bool isMe = senderId == _currentUserId;
@@ -122,7 +130,6 @@ class _ChatPageState extends State<ChatPage> {
             ));
           });
 
-          // send read receipt for incoming message
           if (!isMe && widget.conversationId != null) {
             ChatServices().sendReadReceipt(
               conversationId: widget.conversationId!,
@@ -133,10 +140,8 @@ class _ChatPageState extends State<ChatPage> {
           _scrollToBottom();
         } else if (type == 'typing') {
           final String userId = json['user_id']?.toString() ?? '';
-          // show typing only if it's the doctor typing, not us
           if (userId != _currentUserId) {
             setState(() => _isDoctorTyping = true);
-            // auto-hide after 3 seconds if no new typing event
             _typingTimer?.cancel();
             _typingTimer = Timer(const Duration(seconds: 3), () {
               if (mounted) setState(() => _isDoctorTyping = false);
@@ -157,13 +162,10 @@ class _ChatPageState extends State<ChatPage> {
     });
   }
 
-  // ── send message ──
   void _sendMessage() {
     final text = _controller.text.trim();
-    if (text.isEmpty) return;
-    if (widget.conversationId == null) return;
+    if (text.isEmpty || widget.conversationId == null) return;
 
-    // add bubble immediately (optimistic)
     setState(() {
       _messages.add(_ChatMessage(
         id: '',
@@ -177,14 +179,12 @@ class _ChatPageState extends State<ChatPage> {
     _controller.clear();
     _scrollToBottom();
 
-    // send over WebSocket
     ChatServices().sendMessage(
       conversationId: widget.conversationId!,
       message: text,
     );
   }
 
-  // ── send typing indicator while user types ──
   void _onTextChanged(String value) {
     if (widget.conversationId == null) return;
     ChatServices().sendTyping(conversationId: widget.conversationId!);
@@ -221,7 +221,7 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   void dispose() {
-    _subscription?.cancel(); // stop listening — but WebSocket stays open
+    _subscription?.cancel();
     _typingTimer?.cancel();
     _controller.dispose();
     _scrollController.dispose();
@@ -259,66 +259,17 @@ class _ChatPageState extends State<ChatPage> {
       ),
       title: Row(
         children: [
-          Stack(
-            children: [
-              widget.avatarUrl != null
-                  ? CircleAvatar(
-                      radius: 20,
-                      backgroundImage: NetworkImage(widget.avatarUrl!),
-                    )
-                  : CircleAvatar(
-                      radius: 20,
-                      backgroundColor: const Color(0xFF4C6EF5),
-                      child: Text(
-                        _initials(widget.doctorName),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-              Positioned(
-                bottom: 1,
-                right: 1,
-                child: Container(
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2DD4A0),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                      width: 2,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
+          _buildAvatar(radius: 20),
           const SizedBox(width: 10),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.doctorName,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.white : const Color(0xFF1A1D23),
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const Text(
-                  'Online',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Color(0xFF2DD4A0),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
+            child: Text(
+              _displayName,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: isDark ? Colors.white : const Color(0xFF1A1D23),
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -341,11 +292,33 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
+  Widget _buildAvatar({required double radius}) {
+    if (widget.avatarUrl != null && widget.avatarUrl!.isNotEmpty) {
+      return CircleAvatar(
+        radius: radius,
+        backgroundImage: NetworkImage(widget.avatarUrl!),
+        onBackgroundImageError: (_, __) {},
+        backgroundColor: const Color(0xFF4C6EF5),
+        child: null,
+      );
+    }
+    return CircleAvatar(
+      radius: radius,
+      backgroundColor: const Color(0xFF4C6EF5),
+      child: Text(
+        _initials,
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: radius * 0.55,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
   Widget _buildMessagesList(bool isDark) {
     if (_isLoadingHistory) {
-      return const Center(
-        child: CircularProgressIndicator(color: Color(0xFF4C6EF5)),
-      );
+      return const Center(child: CircularProgressIndicator(color: Color(0xFF4C6EF5)));
     }
     return ListView.builder(
       controller: _scrollController,
@@ -354,7 +327,11 @@ class _ChatPageState extends State<ChatPage> {
       itemBuilder: (context, index) {
         if (index == 0) return const _DateDivider(label: 'Today');
         final msg = _messages[index - 1];
-        return _MessageBubble(message: msg, isDark: isDark);
+        return _MessageBubble(
+          message: msg,
+          isDark: isDark,
+          senderAvatar: _buildAvatar(radius: 13),
+        );
       },
     );
   }
@@ -364,14 +341,7 @@ class _ChatPageState extends State<ChatPage> {
       padding: const EdgeInsets.only(left: 16, bottom: 4),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 13,
-            backgroundColor: const Color(0xFF4C6EF5),
-            child: Text(
-              _initials(widget.doctorName),
-              style: const TextStyle(fontSize: 8, color: Colors.white),
-            ),
-          ),
+          _buildAvatar(radius: 13),
           const SizedBox(width: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -456,13 +426,6 @@ class _ChatPageState extends State<ChatPage> {
       ),
     );
   }
-
-  String _initials(String name) {
-    final parts = name.trim().split(' ');
-    if (parts.length >= 2) return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
-    if (name.length >= 2) return name.substring(0, 2).toUpperCase();
-    return '?';
-  }
 }
 
 // ── Data model ────────────────────────────────────────────────────────────────
@@ -496,30 +459,24 @@ class _ChatMessage {
 class _MessageBubble extends StatelessWidget {
   final _ChatMessage message;
   final bool isDark;
-  const _MessageBubble({required this.message, required this.isDark});
+  final Widget senderAvatar;
+
+  const _MessageBubble({
+    required this.message,
+    required this.isDark,
+    required this.senderAvatar,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
-        mainAxisAlignment:
-            message.isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: message.isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           if (!message.isMe) ...[
-            CircleAvatar(
-              radius: 13,
-              backgroundColor: const Color(0xFF4C6EF5),
-              child: const Text(
-                'DR',
-                style: TextStyle(
-                  fontSize: 8,
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
+            senderAvatar,
             const SizedBox(width: 6),
           ],
           Flexible(
@@ -579,7 +536,6 @@ class _MessageBubble extends StatelessWidget {
                         Icon(
                           Icons.done_all_rounded,
                           size: 14,
-                          // blue if read, grey if not
                           color: message.isRead
                               ? Colors.lightBlueAccent
                               : Colors.white.withOpacity(0.65),
@@ -623,11 +579,7 @@ class _AppBarIconBtn extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
   final bool isDark;
-  const _AppBarIconBtn({
-    required this.icon,
-    required this.onTap,
-    required this.isDark,
-  });
+  const _AppBarIconBtn({required this.icon, required this.onTap, required this.isDark});
 
   @override
   Widget build(BuildContext context) {

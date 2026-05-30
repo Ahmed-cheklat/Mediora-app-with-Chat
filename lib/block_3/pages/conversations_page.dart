@@ -30,14 +30,6 @@ class _ConversationsPageState extends State<ConversationsPage> {
     }
   }
 
-  /// Extracts only the doctor's name from "Doctor Name - Patient Name"
-  String _extractDoctorName(String rawName) {
-    if (rawName.contains('-')) {
-      return rawName.split('-').first.trim();
-    }
-    return rawName.trim();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -74,23 +66,33 @@ class _ConversationsPageState extends State<ConversationsPage> {
                     itemBuilder: (context, index) {
                       final conv =
                           _conversations[index] as Map<String, dynamic>;
-                      final String rawName =
-                          conv['name']?.toString() ?? 'Unknown';
-                      final String doctorName = _extractDoctorName(rawName);
+                      final user =
+                          conv['user'] as Map<String, dynamic>? ?? {};
                       final String conversationId =
                           conv['id']?.toString() ?? '';
+                      final String firstName =
+                          user['first_name']?.toString() ?? 'Unknown';
+                      final String? lastName =
+                          user['last_name']?.toString();
+                      final String? avatarUrl =
+                          user['picture']?.toString();
+                      final String doctorId =
+                          user['id']?.toString() ?? '';
 
                       return _ConversationTile(
                         conversation: conv,
-                        doctorName: doctorName,
+                        firstName: firstName,
+                        lastName: lastName,
+                        avatarUrl: avatarUrl,
                         onTap: () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (_) => ChatPage(
-                                doctorName: doctorName,
-                                doctorId: '',
-                                avatarUrl: null,
+                                firstName: firstName,
+                                lastName: lastName,
+                                doctorId: doctorId,
+                                avatarUrl: avatarUrl,
                                 conversationId: conversationId,
                               ),
                             ),
@@ -142,21 +144,36 @@ class _ConversationsPageState extends State<ConversationsPage> {
 
 class _ConversationTile extends StatelessWidget {
   final Map<String, dynamic> conversation;
-  final String doctorName;
+  final String firstName;
+  final String? lastName;
+  final String? avatarUrl;
   final VoidCallback onTap;
 
   const _ConversationTile({
     required this.conversation,
-    required this.doctorName,
+    required this.firstName,
+    this.lastName,
+    this.avatarUrl,
     required this.onTap,
   });
+
+  String get _displayName {
+    if (lastName != null && lastName!.isNotEmpty) return '$firstName $lastName';
+    return firstName;
+  }
+
+  String get _initials {
+    final last = lastName?.trim() ?? '';
+    if (last.isNotEmpty) return '${firstName[0]}${last[0]}'.toUpperCase();
+    if (firstName.length >= 2) return firstName.substring(0, 2).toUpperCase();
+    return firstName[0].toUpperCase();
+  }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final String lastMessage =
-        conversation['last_message']?.toString() ?? '';
-    final String createdAt = conversation['created_at']?.toString() ?? '';
+    final lastMessage = conversation['last_message']?.toString() ?? '';
+    final createdAt = conversation['created_at']?.toString() ?? '';
 
     return GestureDetector(
       onTap: onTap,
@@ -176,19 +193,8 @@ class _ConversationTile extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // ── Avatar (initials only for now) ──
-            CircleAvatar(
-              radius: 28.r,
-              backgroundColor: const Color(0xFF4C6EF5),
-              child: Text(
-                _initials(doctorName),
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
+            // ── Avatar ──
+            _buildAvatar(),
             SizedBox(width: 12.w),
             // ── Name + last message ──
             Expanded(
@@ -200,7 +206,7 @@ class _ConversationTile extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          doctorName,
+                          _displayName,
                           style: TextStyle(
                             fontSize: 14.sp,
                             fontWeight: FontWeight.w700,
@@ -254,11 +260,27 @@ class _ConversationTile extends StatelessWidget {
     );
   }
 
-  String _initials(String name) {
-    final parts = name.trim().split(' ');
-    if (parts.length >= 2) return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
-    if (name.length >= 2) return name.substring(0, 2).toUpperCase();
-    return '?';
+  Widget _buildAvatar() {
+    if (avatarUrl != null && avatarUrl!.isNotEmpty) {
+      return CircleAvatar(
+        radius: 28.r,
+        backgroundImage: NetworkImage(avatarUrl!),
+        onBackgroundImageError: (_, __) {},
+        backgroundColor: const Color(0xFF4C6EF5),
+      );
+    }
+    return CircleAvatar(
+      radius: 28.r,
+      backgroundColor: const Color(0xFF4C6EF5),
+      child: Text(
+        _initials,
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 14.sp,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
   }
 
   String _formatTime(String isoString) {

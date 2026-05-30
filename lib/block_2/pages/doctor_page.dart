@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:health_icons/health_icons.dart';
 import 'package:mediora/block_2/pages/book_and_pay_page.dart';
 
 class DoctorPage extends StatelessWidget {
@@ -413,8 +414,7 @@ class DoctorPage extends StatelessWidget {
                                             Row(
                                               children: [
                                                 const Icon(
-                                                  Icons
-                                                      .medical_services_outlined,
+                                                  HealthIcons.stethoscopeOutline,
                                                   color: Color(0xFF2463EB),
                                                 ),
                                                 12.horizontalSpace,

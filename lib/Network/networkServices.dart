@@ -1175,7 +1175,8 @@ class UserServices {
         },
         body: jsonEncode(body),
       );
-
+      print(response.statusCode);
+      print(response.body);
       if (response.statusCode == 200) return true;
 
       if (response.statusCode == 401) {
@@ -1297,7 +1298,6 @@ class ChatServices {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        print("data of conversation : $data");
         return data is List ? data : [];
       }
       if (response.statusCode == 401) {
@@ -1315,7 +1315,7 @@ class ChatServices {
     try {
       const secureStorage = FlutterSecureStorage();
       final String? accessToken = await secureStorage.read(key: 'access_token');
-
+      print('URL: ${'$_baseUrl/chat/conversations/$id/messages'}');
       final response = await http.get(
         Uri.parse('$_baseUrl/chat/conversations/$id/messages'),
         headers: {
@@ -1323,13 +1323,11 @@ class ChatServices {
           if (accessToken != null) 'Authorization': 'Bearer $accessToken',
         },
       );
-
       print('getConversationMessages status: ${response.statusCode}');
       print('getConversationMessages body: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        print('data of conversation: $data');
         return data is List ? data : [];
       }
       if (response.statusCode == 401) {
@@ -1340,6 +1338,34 @@ class ChatServices {
     } catch (e) {
       print('getConversationMessages error: $e');
       return [];
+    }
+  }
+
+  Future<bool> modifyConversation(String conversationId) async {
+    try {
+      const secureStorage = FlutterSecureStorage();
+      final String? accessToken = await secureStorage.read(key: 'access_token');
+
+      final response = await http.patch(
+        Uri.parse('$_baseUrl/chat/conversations/$conversationId/'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (accessToken != null) 'Authorization': 'Bearer $accessToken',
+        },
+      );
+
+      print('modifyConversation status: ${response.statusCode}');
+      print('modifyConversation body: ${response.body}');
+
+      if (response.statusCode == 200) return true;
+      if (response.statusCode == 401) {
+        final refreshed = await AuthService().getRefreshToken();
+        if (refreshed.success) return await modifyConversation(conversationId);
+      }
+      return false;
+    } catch (e) {
+      print('modifyConversation error: $e');
+      return false;
     }
   }
 
