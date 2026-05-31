@@ -1,27 +1,157 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:health_icons/health_icons.dart';
+import 'package:mediora/Network/networkServices.dart';
 import 'package:mediora/block_2/pages/book_and_pay_page.dart';
 
-class DoctorPage extends StatelessWidget {
+class DoctorPage extends StatefulWidget {
   final Map<String, dynamic> doctor;
   final List<dynamic>? services;
   const DoctorPage({super.key, required this.doctor, required this.services});
 
   @override
+  State<DoctorPage> createState() => _DoctorPageState();
+}
+
+class _DoctorPageState extends State<DoctorPage> {
+  List<dynamic> _feedbacks = [];
+  bool _isLoadingFeedback = true;
+  final TextEditingController _feedbackController = TextEditingController();
+  bool _submitting = false;
+  bool _hasSubmittedFeedback = false;
+  String? _myFeedbackId;
+  String _currentUserId = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFeedback();
+  }
+
+  @override
+  void dispose() {
+    _feedbackController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadFeedback({bool checkOwn = true}) async {
+    final doctorId = widget.doctor['id']?.toString() ?? '';
+    if (doctorId.isEmpty) return;
+    final data = await FeedBackServices().getFeedback(doctorId: doctorId);
+    if (mounted) {
+      setState(() {
+        _feedbacks = data;
+        _isLoadingFeedback = false;
+      });
+      if (checkOwn) _checkMyFeedback();
+    }
+  }
+
+  Future<void> _checkMyFeedback() async {
+    final user = await UserServices().getUser();
+    final myId = user['id']?.toString() ?? '';
+    if (myId.isEmpty) return;
+    _currentUserId = myId;
+    for (final fb in _feedbacks) {
+      final fbMap = fb as Map<String, dynamic>;
+      final patient = fbMap['patient'] as Map<String, dynamic>? ?? {};
+      final userId = patient['id']?.toString() ?? '';
+      if (userId == myId) {
+        if (mounted) {
+          setState(() {
+            _hasSubmittedFeedback = true;
+            _myFeedbackId = fbMap['id']?.toString();
+            _feedbackController.text = fbMap['body']?.toString() ?? fbMap['comment']?.toString() ?? '';
+          });
+        }
+        break;
+      }
+    }
+  }
+
+  Future<void> _submitFeedback() async {
+    final text = _feedbackController.text.trim();
+    if (text.isEmpty) return;
+    setState(() => _submitting = true);
+
+    final doctorId = widget.doctor['id']?.toString() ?? '';
+    final result = await FeedBackServices().postFeedback(
+      doctorId: doctorId,
+      body: text,
+    );
+
+    if (mounted) {
+      setState(() => _submitting = false);
+      if (result.success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Feedback submitted successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _feedbackController.clear();
+        _loadFeedback();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.message),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _updateFeedback() async {
+    final text = _feedbackController.text.trim();
+    if (text.isEmpty || _myFeedbackId == null) return;
+    setState(() => _submitting = true);
+
+    final result = await FeedBackServices().updateFeedback(
+      feedbackId: _myFeedbackId!,
+      body: text,
+    );
+
+    if (mounted) {
+      setState(() => _submitting = false);
+      if (result.success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Feedback updated successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _feedbackController.clear();
+        setState(() {
+          _hasSubmittedFeedback = false;
+          _myFeedbackId = null;
+        });
+        _loadFeedback(checkOwn: false);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.message),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final firstName = doctor['first_name'] ?? '';
-    final lastName = doctor['last_name'] ?? '';
+    final firstName = widget.doctor['first_name'] ?? '';
+    final lastName = widget.doctor['last_name'] ?? '';
     final fullName = 'Dr. $firstName $lastName'.trim();
-    final specialty = doctor['specialty'] ?? '';
-    final username = doctor['username'] ?? '';
-    final email = doctor['email'] ?? '';
-    final picture = doctor['picture'];
-    final gender = doctor['gender'];
-    final description = (doctor['description'] as String?)?.trim() ?? '';
-    final clinicPos = (doctor['clinic_pos'] as String?)?.trim() ?? '';
-    final imageForWorkplace = doctor['image_for_workplace'];
+    final specialty = widget.doctor['specialty'] ?? '';
+    final username = widget.doctor['username'] ?? '';
+    final email = widget.doctor['email'] ?? '';
+    final picture = widget.doctor['picture'];
+    final gender = widget.doctor['gender'];
+    final description = (widget.doctor['description'] as String?)?.trim() ?? '';
+    final clinicPos = (widget.doctor['clinic_pos'] as String?)?.trim() ?? '';
+    final imageForWorkplace = widget.doctor['image_for_workplace'];
 
     // Parse clinic images — could be List or single string
     List<String> clinicImages = [];
@@ -41,13 +171,13 @@ class DoctorPage extends StatelessWidget {
         picture.toString().startsWith('http') &&
         picture.toString() != 'string';
 
-    final Map<String, dynamic>? consultation = services?.firstWhere(
+    final Map<String, dynamic>? consultation = widget.services?.firstWhere(
       (s) => s['name'].toString().toLowerCase() == 'consultation',
       orElse: () => null,
     );
 
     final List<dynamic> otherServices =
-        services
+        widget.services
             ?.where((s) => s['name'].toString().toLowerCase() != 'consultation')
             .toList() ??
         [];
@@ -146,7 +276,7 @@ class DoctorPage extends StatelessWidget {
                               ),
                             ),
                           ),
-                          if (doctor["gender"].isNotEmpty) ...[
+                          if (widget.doctor["gender"].isNotEmpty) ...[
                             8.horizontalSpace,
                             Container(
                               padding: EdgeInsets.symmetric(
@@ -155,17 +285,17 @@ class DoctorPage extends StatelessWidget {
                               ),
                               decoration: BoxDecoration(
                                 color:
-                                    doctor["gender"].toLowerCase() == 'female'
+                                    widget.doctor["gender"].toLowerCase() == 'female'
                                     ? const Color(0xFFFF4D9E).withOpacity(0.12)
                                     : const Color(0xFF2463EB).withOpacity(0.12),
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: Text(
-                                doctor["gender"],
+                                widget.doctor["gender"],
                                 style: TextStyle(
                                   fontSize: 13.sp,
                                   color:
-                                      doctor['gender'].toLowerCase() == 'female'
+                                      widget.doctor['gender'].toLowerCase() == 'female'
                                       ? const Color(0xFFFF4D9E)
                                       : const Color(0xFF2463EB),
                                   fontWeight: FontWeight.w500,
@@ -492,44 +622,262 @@ class DoctorPage extends StatelessWidget {
                       ),
                     ),
                   ],
-                  24.verticalSpace,
-                  // ── Book button ───────────────────────────────
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        if (consultation == null) {
-                          showDialog(
-                            context: context,
-                            builder: (context) => AlertDialog(
-                              title: const Text("Service Unavailable"),
-                              content: const Text(
-                                "You cannot take an appointment with a doctor who doesn't have a consultation service.",
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  child: const Text(
-                                    "OK",
-                                    style: TextStyle(color: Color(0xFF2463EB)),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                          return;
-                        }
+                   24.verticalSpace,
+                   // ── Feedback ──────────────────────────────
+                   const _SectionTitle(title: 'Feedback'),
+                   12.verticalSpace,
+                   _isLoadingFeedback
+                       ? const Center(child: CircularProgressIndicator(color: Color(0xFF2463EB)))
+                       : Column(
+                           children: [
+                if (_feedbacks.isNotEmpty)
+                                ...List.generate(_feedbacks.length, (index) {
+                                  final fb = _feedbacks[index] as Map<String, dynamic>;
+                                  final patient = fb['patient'] as Map<String, dynamic>? ?? {};
+                                  final username = patient['username']?.toString() ?? 'Anonymous';
+                                  return Card(
+                                    child: Padding(
+                                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Row(
+                                                children: [
+                                                  CircleAvatar(
+                                                    radius: 14.r,
+                                                    backgroundColor: const Color(0xFF2463EB).withOpacity(0.1),
+                                                    child: Text(
+                                                      username.isNotEmpty ? username[0].toUpperCase() : '?',
+                                                      style: TextStyle(
+                                                        fontSize: 12.sp,
+                                                        color: const Color(0xFF2463EB),
+                                                        fontWeight: FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  8.horizontalSpace,
+                                                  Text(
+                                                    username,
+                                                    style: TextStyle(
+                                                      fontSize: 13.sp,
+                                                      fontWeight: FontWeight.w600,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Text(
+                                                    _formatDate(fb['created_at']?.toString() ?? ''),
+                                                    style: TextStyle(fontSize: 11.sp, color: Colors.grey),
+                                                  ),
+                                                  if (patient['id']?.toString() == _currentUserId)
+                                                    PopupMenuButton<String>(
+                                                      icon: Icon(Icons.more_horiz, size: 18.sp, color: Colors.grey),
+                                                      onSelected: (value) {
+                                                        final fbId = fb['id']?.toString() ?? '';
+                                                        final fbBody = fb['body']?.toString() ?? '';
+                                                        if (value == 'edit') {
+                                                          setState(() {
+                                                            _feedbackController.text = fbBody;
+                                                            _myFeedbackId = fbId;
+                                                            _hasSubmittedFeedback = true;
+                                                          });
+                                                        } else if (value == 'delete') {
+                                                          _confirmDeleteFeedback(fbId);
+                                                        }
+                                                      },
+                                                      itemBuilder: (_) => [
+                                                        const PopupMenuItem(value: 'edit', child: Text('Modify')),
+                                                        const PopupMenuItem(value: 'delete', child: Text('Delete')),
+                                                      ],
+                                                    ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                          SizedBox(height: 8.h),
+                                          Text(
+                                            fb['body']?.toString() ?? '',
+                                            style: TextStyle(fontSize: 13.sp, height: 1.5),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                }),
+                             if (!_hasSubmittedFeedback) ...[
+                               12.verticalSpace,
+                               TextField(
+                                 controller: _feedbackController,
+                                 maxLines: 3,
+                                 decoration: InputDecoration(
+                                   hintText: 'Share your experience with this doctor...',
+                                   hintStyle: const TextStyle(color: Colors.grey),
+                                   border: OutlineInputBorder(
+                                     borderRadius: BorderRadius.circular(12),
+                                   ),
+                                   contentPadding: const EdgeInsets.all(12),
+                                 ),
+                               ),
+                               12.verticalSpace,
+                               SizedBox(
+                                 width: double.infinity,
+                                 child: ElevatedButton(
+                                   onPressed: _submitting ? null : _submitFeedback,
+                                   style: ElevatedButton.styleFrom(
+                                     backgroundColor: const Color(0xFF2463EB),
+                                     foregroundColor: Colors.white,
+                                     padding: const EdgeInsets.symmetric(vertical: 12),
+                                     shape: RoundedRectangleBorder(
+                                       borderRadius: BorderRadius.circular(12),
+                                     ),
+                                   ),
+                                   child: _submitting
+                                       ? const SizedBox(
+                                           width: 20,
+                                           height: 20,
+                                           child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                         )
+                                       : const Text('Submit Feedback', style: TextStyle(fontWeight: FontWeight.w600)),
+                                 ),
+                               ),
+                             ] else ...[
+                               12.verticalSpace,
+                               TextField(
+                                 controller: _feedbackController,
+                                 maxLines: 3,
+                                 decoration: InputDecoration(
+                                   hintText: 'Update your feedback...',
+                                   hintStyle: const TextStyle(color: Colors.grey),
+                                   border: OutlineInputBorder(
+                                     borderRadius: BorderRadius.circular(12),
+                                   ),
+                                   contentPadding: const EdgeInsets.all(12),
+                                 ),
+                               ),
+                               12.verticalSpace,
+                               Row(
+                                 children: [
+                                   Expanded(
+                                     child: ElevatedButton(
+                                       onPressed: _submitting ? null : _updateFeedback,
+                                       style: ElevatedButton.styleFrom(
+                                         backgroundColor: const Color(0xFF2463EB),
+                                         foregroundColor: Colors.white,
+                                         padding: const EdgeInsets.symmetric(vertical: 12),
+                                         shape: RoundedRectangleBorder(
+                                           borderRadius: BorderRadius.circular(12),
+                                         ),
+                                       ),
+                                       child: _submitting
+                                           ? const SizedBox(
+                                               width: 20,
+                                               height: 20,
+                                               child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                             )
+                                           : const Text('Update Feedback', style: TextStyle(fontWeight: FontWeight.w600)),
+                                     ),
+                                   ),
+                                   const SizedBox(width: 12),
+                                   Expanded(
+                                     child: OutlinedButton(
+                                        onPressed: () async {
+                                          if (_myFeedbackId == null) return;
+                                          final confirmed = await showDialog<bool>(
+                                            context: context,
+                                            builder: (ctx) => AlertDialog(
+                                              title: const Text('Delete Feedback'),
+                                              content: const Text('Are you sure you want to delete this feedback?'),
+                                              actions: [
+                                                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                                                TextButton(
+                                                  onPressed: () => Navigator.pop(ctx, true),
+                                                  style: TextButton.styleFrom(foregroundColor: Colors.red),
+                                                  child: const Text('Delete'),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                          if (confirmed != true || !mounted) return;
+                                          final result = await FeedBackServices().deleteFeedback(
+                                            feedbackId: _myFeedbackId!,
+                                          );
+                                          if (mounted) {
+                                            if (result.success) {
+                                              _feedbackController.clear();
+                                              setState(() {
+                                                _hasSubmittedFeedback = false;
+                                                _myFeedbackId = null;
+                                              });
+                                              _loadFeedback(checkOwn: false);
+                                            }
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(
+                                                content: Text(result.success ? 'Feedback deleted' : result.message),
+                                                backgroundColor: result.success ? Colors.green : Colors.red,
+                                              ),
+                                            );
+                                          }
+                                        },
+                                       style: OutlinedButton.styleFrom(
+                                         foregroundColor: Colors.red,
+                                         side: const BorderSide(color: Colors.red),
+                                         padding: const EdgeInsets.symmetric(vertical: 12),
+                                         shape: RoundedRectangleBorder(
+                                           borderRadius: BorderRadius.circular(12),
+                                         ),
+                                       ),
+                                       child: const Text('Delete', style: TextStyle(fontWeight: FontWeight.w600)),
+                                     ),
+                                   ),
+                                 ],
+                               ),
+                             ],
+                           ],
+                         ),
+                   24.verticalSpace,
+                   // ── Book button ───────────────────────────────
+                   SizedBox(
+                     width: double.infinity,
+                     child: ElevatedButton.icon(
+                       onPressed: () {
+                         if (consultation == null) {
+                           showDialog(
+                             context: context,
+                             builder: (context) => AlertDialog(
+                               title: const Text("Service Unavailable"),
+                               content: const Text(
+                                 "You cannot take an appointment with a doctor who doesn't have a consultation service.",
+                               ),
+                               actions: [
+                                 TextButton(
+                                   onPressed: () => Navigator.pop(context),
+                                   child: const Text(
+                                     "OK",
+                                     style: TextStyle(color: Color(0xFF2463EB)),
+                                   ),
+                                 ),
+                               ],
+                             ),
+                           );
+                           return;
+                         }
 
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => BookAndPayPage(
-                              doctor: doctor,
-                              consultation: consultation,
-                            ),
-                          ),
-                        );
-                      },
+                         Navigator.push(
+                           context,
+                           MaterialPageRoute(
+                             builder: (context) => BookAndPayPage(
+                               doctor: widget.doctor,
+                               consultation: consultation,
+                             ),
+                           ),
+                         );
+                       },
                       icon: const Icon(
                         Icons.calendar_month_outlined,
                         color: Colors.white,
@@ -558,6 +906,56 @@ class DoctorPage extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _confirmDeleteFeedback(String feedbackId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Feedback'),
+        content: const Text('Are you sure you want to delete this feedback?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      final result = await FeedBackServices().deleteFeedback(feedbackId: feedbackId);
+      if (mounted) {
+        if (result.success) {
+          _feedbackController.clear();
+          setState(() {
+            _hasSubmittedFeedback = false;
+            _myFeedbackId = null;
+          });
+          _loadFeedback(checkOwn: false);
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.success ? 'Feedback deleted' : result.message),
+            backgroundColor: result.success ? Colors.green : Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  String _formatDate(String iso) {
+    try {
+      final dt = DateTime.parse(iso);
+      final months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      final hour = dt.hour > 12 ? dt.hour - 12 : (dt.hour == 0 ? 12 : dt.hour);
+      final min = dt.minute.toString().padLeft(2, '0');
+      final ampm = dt.hour >= 12 ? 'PM' : 'AM';
+      return '${months[dt.month - 1]} ${dt.day}, ${dt.year} $hour:$min $ampm';
+    } catch (_) {
+      return iso;
+    }
   }
 }
 
@@ -589,6 +987,7 @@ class _InfoCard extends StatelessWidget {
       ),
     );
   }
+
 }
 
 class _InfoRow extends StatelessWidget {

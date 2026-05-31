@@ -69,46 +69,47 @@ class _ChatPageState extends State<ChatPage> {
     if (mounted) setState(() => _currentUserId = id);
   }
 
-  Future<void> _loadHistory() async {
-    if (widget.conversationId == null) {
-      if (mounted) setState(() => _isLoadingHistory = false);
-      return;
-    }
-    final data = await ChatServices().getConversationMessages(
-      widget.conversationId!,
-    );
-    if (!mounted) return;
-
-    final List<_ChatMessage> history = data.map((item) {
-      final msg = item as Map<String, dynamic>;
-      final String senderId = msg['sender_id']?.toString() ?? '';
-      final bool isMe = senderId == _currentUserId;
-      final String body = msg['body']?.toString() ?? '';
-      final String createdAt = msg['created_at']?.toString() ?? '';
-      final String messageId = msg['message_id']?.toString() ?? '';
-      return _ChatMessage(
-        id: messageId,
-        text: body,
-        isMe: isMe,
-        time: _formatTime(createdAt),
-        isRead: false,
-      );
-    }).toList();
-
-    setState(() {
-      _messages.addAll(history);
-      _isLoadingHistory = false;
-    });
-
-    if (history.isNotEmpty && widget.conversationId != null) {
-      ChatServices().sendReadReceipt(
-        conversationId: widget.conversationId!,
-        messageId: history.last.id,
-      );
-    }
-
-    _scrollToBottom();
+ Future<void> _loadHistory() async {
+  if (widget.conversationId == null) {
+    if (mounted) setState(() => _isLoadingHistory = false);
+    return;
   }
+
+  final data = await ChatServices().getConversationMessages(
+    widget.conversationId!,
+  );
+
+  if (!mounted) return;
+
+  if (data.isEmpty) {
+    // No messages yet - totally fine
+    setState(() => _isLoadingHistory = false);
+    return;
+  }
+
+  final List<_ChatMessage> history = data.reversed.map((item) {
+    final msg = item as Map<String, dynamic>;
+    final String senderId = msg['sender_id']?.toString() ?? '';
+    final bool isMe = senderId == _currentUserId;
+    final String body = msg['body']?.toString() ?? '';
+    final String createdAt = msg['created_at']?.toString() ?? '';
+    final String messageId = msg['message_id']?.toString() ?? '';
+    return _ChatMessage(
+      id: messageId,
+      text: body,
+      isMe: isMe,
+      time: _formatTime(createdAt),
+      isRead: false,
+    );
+  }).toList();
+
+  setState(() {
+    _messages.addAll(history);
+    _isLoadingHistory = false;
+  });
+
+  _scrollToBottom();
+}
 
   void _listenToMessages() {
     _subscription = ChatServices().messageStream?.listen((data) {

@@ -3,6 +3,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:cloudinary_public/cloudinary_public.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
@@ -377,7 +378,7 @@ class AuthService {
       print('signOut status: ${response.statusCode}');
       print('signOut body: ${response.body}');
 
-      if (response.statusCode == 200 || response.statusCode == 204) {
+      if (response.statusCode == 200 || response.statusCode == 204 || response.statusCode == 401) {
         await secureStorage.deleteAll();
         return AuthResult(success: true, message: "Signed out successfully");
       }
@@ -448,7 +449,6 @@ class AuthService {
           message: "Token refreshed successfully",
         );
       }
-
       if (response.statusCode == 401) {
         await secureStorage.delete(key: 'access_token');
         await secureStorage.delete(key: 'refresh_token');
@@ -1311,29 +1311,53 @@ class ChatServices {
     }
   }
 
-  Future<List<dynamic>> getConversationMessages(String id) async {
+  Future<List<dynamic>> getConversationMessages(
+    String id, {
+    int page = 1,
+    int limit = 20,
+  }) async {
     try {
       const secureStorage = FlutterSecureStorage();
       final String? accessToken = await secureStorage.read(key: 'access_token');
-      print('URL: ${'$_baseUrl/chat/conversations/$id/messages'}');
+      final String? deviceId = await secureStorage.read(key: 'device_id');
+      // DEBUG - print everything
+      print('Token: $accessToken');
+      print(
+        'URL: $_baseUrl/chat/conversations/$id/messages?page=$page&limit=$limit',
+      );
+
       final response = await http.get(
-        Uri.parse('$_baseUrl/chat/conversations/$id/messages'),
+        Uri.parse('$_baseUrl/chat/conversations/:$id/messages'),
         headers: {
-          'Content-Type': 'application/json',
+          'accept': 'application/json',
           if (accessToken != null) 'Authorization': 'Bearer $accessToken',
         },
       );
+      print("device id : $deviceId");
+      print('$_baseUrl/chat/conversations/$id/messages');
+      print('id : $id');
+      print('access token : $accessToken');
       print('getConversationMessages status: ${response.statusCode}');
       print('getConversationMessages body: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        return data is List ? data : [];
+        if (data is Map && data['data'] is List) return data['data'] as List;
+        if (data is List) return data;
+        return [];
       }
+
+      // Token expired - refresh and retry
       if (response.statusCode == 401) {
         final refreshed = await AuthService().getRefreshToken();
-        if (refreshed.success) return await getConversationMessages(id);
+        if (refreshed.success) {
+          return await getConversationMessages(id, page: page, limit: limit);
+        }
+        return []; // refresh failed, stop here
       }
+
+      // 404 = just return empty, don't retry
+      return [];
       return [];
     } catch (e) {
       print('getConversationMessages error: $e');
@@ -1408,9 +1432,11 @@ class ChatServices {
       return;
     }
     final payload = jsonEncode({
-      'type': 'message',
-      'conversation_id': conversationId,
-      'message': message,
+      'type': 'message.send',
+      'payload' : {
+        'conversation_id': conversationId,
+        'message': message,
+      }
     });
     _channel!.sink.add(payload);
     print('WebSocket sendMessage: $payload');
@@ -1420,8 +1446,10 @@ class ChatServices {
   void sendTyping({required String conversationId}) {
     if (_channel == null) return;
     final payload = jsonEncode({
-      'type': 'typing',
-      'conversation_id': conversationId,
+      'type': 'message.typing',
+      'payload': {
+        'conversation_id': conversationId,
+      }
     });
     _channel!.sink.add(payload);
   }
@@ -1433,9 +1461,11 @@ class ChatServices {
   }) {
     if (_channel == null) return;
     final payload = jsonEncode({
-      'type': 'read',
-      'conversation_id': conversationId,
-      'message': messageId,
+      'type': 'message.read',
+      'payload' : {
+        'conversation_id': conversationId,
+        'message': messageId,
+      }
     });
     _channel!.sink.add(payload);
   }
@@ -1453,4 +1483,150 @@ class ChatServices {
 
   // Stream of incoming messages
   Stream? get messageStream => _channel?.stream;
+}
+
+class FeedBackServices {
+  static const String _baseUrl = 'https://mediora-back-2.onrender.com';
+
+  Future<List<dynamic>> getFeedback({required String doctorId}) async {
+    try {
+      const secureStorage = FlutterSecureStorage();
+      final String? accessToken = await secureStorage.read(key: 'access_token');
+
+      final response = await http.get(
+        Uri.parse('$_baseUrl/doctors/$doctorId/feedback'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (accessToken != null) 'Authorization': 'Bearer $accessToken',
+        },
+      );
+
+      print('getFeedback status: ${response.statusCode}');
+      print('getFeedback body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final list = data['data'];
+        return list is List ? list : [];
+      }
+      if (response.statusCode == 401) {
+        final refreshed = await AuthService().getRefreshToken();
+        if (refreshed.success) return await getFeedback(doctorId: doctorId);
+      }
+      return [];
+    } catch (e) {
+      print('getFeedback error: $e');
+      return [];
+    }
+  }
+
+  Future<Result> postFeedback({
+    required String doctorId,
+    required String body,
+  }) async {
+    try {
+      const secureStorage = FlutterSecureStorage();
+      final String? accessToken = await secureStorage.read(key: 'access_token');
+
+      final response = await http.post(
+        Uri.parse('$_baseUrl/doctors/$doctorId/feedback'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (accessToken != null) 'Authorization': 'Bearer $accessToken',
+        },
+        body: jsonEncode({'body': body}),
+      );
+
+      print('postFeedback status: ${response.statusCode}');
+      print('postFeedback body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return Result(
+          success: true,
+          message: 'Feedback submitted successfully',
+        );
+      }
+      if (response.statusCode == 401) {
+        final refreshed = await AuthService().getRefreshToken();
+        if (refreshed.success) {
+          return await postFeedback(doctorId: doctorId, body: body);
+        }
+      }
+      return Result(success: false, message: 'Something went wrong');
+    } catch (e) {
+      print('postFeedback error: $e');
+      return Result(success: false, message: 'No internet connection');
+    }
+  }
+
+  Future<Result> updateFeedback({
+    required String feedbackId,
+    String? body,
+  }) async {
+    try {
+      const secureStorage = FlutterSecureStorage();
+      final String? accessToken = await secureStorage.read(key: 'access_token');
+
+      final Map<String, dynamic> bodyMap = {};
+      if (body != null) bodyMap['body'] = body;
+
+      final response = await http.patch(
+        Uri.parse('$_baseUrl/doctors/feedback/$feedbackId'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (accessToken != null) 'Authorization': 'Bearer $accessToken',
+        },
+        body: jsonEncode(bodyMap),
+      );
+
+      print('updateFeedback status: ${response.statusCode}');
+      print('updateFeedback body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        return Result(success: true, message: 'Feedback updated successfully');
+      }
+      if (response.statusCode == 401) {
+        final refreshed = await AuthService().getRefreshToken();
+        if (refreshed.success) {
+          return await updateFeedback(feedbackId: feedbackId, body: body);
+        }
+      }
+      return Result(success: false, message: 'Something went wrong');
+    } catch (e) {
+      print('updateFeedback error: $e');
+      return Result(success: false, message: 'No internet connection');
+    }
+  }
+
+  Future<Result> deleteFeedback({required String feedbackId}) async {
+    try {
+      const secureStorage = FlutterSecureStorage();
+      final String? accessToken = await secureStorage.read(key: 'access_token');
+
+      final response = await http.delete(
+        Uri.parse('$_baseUrl/doctors/feedback/$feedbackId'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (accessToken != null) 'Authorization': 'Bearer $accessToken',
+        },
+      );
+
+      print('deleteFeedback status: ${response.statusCode}');
+      print('deleteFeedback body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        return Result(success: true, message: 'Feedback deleted successfully');
+      }
+      if (response.statusCode == 401) {
+        final refreshed = await AuthService().getRefreshToken();
+        if (refreshed.success) {
+          return await deleteFeedback(feedbackId: feedbackId);
+        }
+      }
+      return Result(success: false, message: 'Something went wrong');
+    } catch (e) {
+      print('deleteFeedback error: $e');
+      return Result(success: false, message: 'No internet connection');
+    }
+  }
 }
