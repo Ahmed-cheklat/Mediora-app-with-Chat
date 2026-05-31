@@ -1,15 +1,14 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:cloudinary_public/cloudinary_public.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
-import 'package:web_socket_channel/status.dart' as status;
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 class AuthResult {
@@ -73,16 +72,27 @@ class AuthService {
 
         if (data['token'] != null) {
           await secureStorage.write(key: 'access_token', value: data['token']);
+
+          // ✅ decode JWT and save user_id
+          final parts = data['token'].toString().split('.');
+          if (parts.length == 3) {
+            final jwtPayload = jsonDecode(
+              utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
+            );
+            final userId = jwtPayload['id']?.toString();
+            if (userId != null) {
+              await secureStorage.write(key: 'user_id', value: userId);
+              print('User ID saved: $userId');
+            }
+          }
         }
 
         final String? refreshTokenHeader = response.headers['refresh_token'];
-
         if (refreshTokenHeader != null) {
           await secureStorage.write(
             key: 'refresh_token',
             value: refreshTokenHeader,
           );
-
           final String? deviceIdCookie = _extractCookieValue(
             response.headers['set-cookie'] ?? '',
             'device_id',
@@ -378,13 +388,18 @@ class AuthService {
       print('signOut status: ${response.statusCode}');
       print('signOut body: ${response.body}');
 
-      if (response.statusCode == 200 || response.statusCode == 204 || response.statusCode == 401) {
-        await secureStorage.deleteAll();
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        ChatServices().disconnectChat(); // ✅ disconnect
+        await secureStorage.deleteAll(); // ✅ clear
         return AuthResult(success: true, message: "Signed out successfully");
       }
+
       if (response.statusCode == 401) {
-        return AuthResult(success: false, message: "Already signed out");
+        ChatServices().disconnectChat(); // ✅ disconnect
+        await secureStorage.deleteAll(); // ✅ clear
+        return AuthResult(success: true, message: "Signed out successfully");
       }
+
       if (response.statusCode == 500) {
         return AuthResult(
           success: false,
@@ -394,6 +409,9 @@ class AuthService {
 
       return AuthResult(success: false, message: "Something went wrong");
     } catch (e) {
+      ChatServices().disconnectChat(); // ✅ disconnect even on error
+      const secureStorage = FlutterSecureStorage();
+      await secureStorage.deleteAll(); // ✅ clear even on error
       print('Network Error during Sign Out: $e');
       return AuthResult(success: false, message: "No internet connection");
     }
@@ -1358,7 +1376,6 @@ class ChatServices {
 
       // 404 = just return empty, don't retry
       return [];
-      return [];
     } catch (e) {
       print('getConversationMessages error: $e');
       return [];
@@ -1395,6 +1412,12 @@ class ChatServices {
 
   static const String _wsBaseUrl = 'wss://mediora-back-2.onrender.com';
   WebSocketChannel? _channel;
+  Timer? _heartbeatTimer;
+
+  void _sendPing() {
+    if (_channel == null) return;
+    _channel!.sink.add(jsonEncode({'type': 'ping'}));
+  }
 
   Future<WebSocketChannel?> connectToChat() async {
     try {
@@ -1411,6 +1434,12 @@ class ChatServices {
       );
 
       print('WebSocket: connected');
+
+      _heartbeatTimer?.cancel();
+      _heartbeatTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+        _sendPing();
+      });
+
       return _channel;
     } catch (e) {
       print('WebSocket connect error: $e');
@@ -1420,7 +1449,9 @@ class ChatServices {
 
   // Disconnect from WebSocket
   void disconnectChat() {
-    _channel?.sink.close(status.goingAway);
+    _heartbeatTimer?.cancel();
+    _heartbeatTimer = null;
+    _channel?.sink.close();
     _channel = null;
     print('WebSocket: disconnected');
   }
@@ -1433,10 +1464,7 @@ class ChatServices {
     }
     final payload = jsonEncode({
       'type': 'message.send',
-      'payload' : {
-        'conversation_id': conversationId,
-        'message': message,
-      }
+      'payload': {'conversation_id': conversationId, 'message': message},
     });
     _channel!.sink.add(payload);
     print('WebSocket sendMessage: $payload');
@@ -1447,9 +1475,7 @@ class ChatServices {
     if (_channel == null) return;
     final payload = jsonEncode({
       'type': 'message.typing',
-      'payload': {
-        'conversation_id': conversationId,
-      }
+      'payload': {'conversation_id': conversationId},
     });
     _channel!.sink.add(payload);
   }
@@ -1462,23 +1488,14 @@ class ChatServices {
     if (_channel == null) return;
     final payload = jsonEncode({
       'type': 'message.read',
-      'payload' : {
-        'conversation_id': conversationId,
-        'message': messageId,
-      }
+      'payload': {'conversation_id': conversationId, 'message': messageId},
     });
     _channel!.sink.add(payload);
   }
 
   // ping
   void ping() {
-    if (_channel == null) {
-      print('WebSocket: not connected, cannot ping');
-      return;
-    }
-    final payload = jsonEncode({'type': 'ping'});
-    _channel!.sink.add(payload);
-    print('WebSocket ping sent');
+    _sendPing();
   }
 
   // Stream of incoming messages

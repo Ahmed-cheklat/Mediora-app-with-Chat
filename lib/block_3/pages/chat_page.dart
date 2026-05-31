@@ -66,50 +66,50 @@ class _ChatPageState extends State<ChatPage> {
 
   Future<void> _loadCurrentUser() async {
     final id = await _secureStorage.read(key: 'user_id');
+    print('Loaded user_id: $id');
     if (mounted) setState(() => _currentUserId = id);
   }
 
- Future<void> _loadHistory() async {
-  if (widget.conversationId == null) {
-    if (mounted) setState(() => _isLoadingHistory = false);
-    return;
-  }
+  Future<void> _loadHistory() async {
+    if (widget.conversationId == null) {
+      if (mounted) setState(() => _isLoadingHistory = false);
+      return;
+    }
 
-  final data = await ChatServices().getConversationMessages(
-    widget.conversationId!,
-  );
-
-  if (!mounted) return;
-
-  if (data.isEmpty) {
-    // No messages yet - totally fine
-    setState(() => _isLoadingHistory = false);
-    return;
-  }
-
-  final List<_ChatMessage> history = data.reversed.map((item) {
-    final msg = item as Map<String, dynamic>;
-    final String senderId = msg['sender_id']?.toString() ?? '';
-    final bool isMe = senderId == _currentUserId;
-    final String body = msg['body']?.toString() ?? '';
-    final String createdAt = msg['created_at']?.toString() ?? '';
-    final String messageId = msg['message_id']?.toString() ?? '';
-    return _ChatMessage(
-      id: messageId,
-      text: body,
-      isMe: isMe,
-      time: _formatTime(createdAt),
-      isRead: false,
+    final data = await ChatServices().getConversationMessages(
+      widget.conversationId!,
     );
-  }).toList();
 
-  setState(() {
-    _messages.addAll(history);
-    _isLoadingHistory = false;
-  });
+    if (!mounted) return;
 
-  _scrollToBottom();
-}
+    if (data.isEmpty) {
+      setState(() => _isLoadingHistory = false);
+      return;
+    }
+
+    final List<_ChatMessage> history = data.reversed.map((item) {
+      final msg = item as Map<String, dynamic>;
+      final String senderId = msg['sender_id']?.toString() ?? '';
+      final bool isMe = senderId == _currentUserId;
+      final String body = msg['body']?.toString() ?? '';
+      final String createdAt = msg['created_at']?.toString() ?? '';
+      final String messageId = msg['id']?.toString() ?? ''; // ✅ 'id' not 'message_id'
+      return _ChatMessage(
+        id: messageId,
+        text: body,
+        isMe: isMe,
+        time: _formatTime(createdAt),
+        isRead: false,
+      );
+    }).toList();
+
+    setState(() {
+      _messages.addAll(history);
+      _isLoadingHistory = false;
+    });
+
+    _scrollToBottom();
+  }
 
   void _listenToMessages() {
     _subscription = ChatServices().messageStream?.listen((data) {
@@ -117,17 +117,25 @@ class _ChatPageState extends State<ChatPage> {
       try {
         final json = jsonDecode(data as String) as Map<String, dynamic>;
         final String type = json['type']?.toString() ?? '';
+        print('WebSocket received type: $type');
+        print('WebSocket received full: $json');
 
-        if (type == 'message') {
-          final String convId = json['conv_id']?.toString() ?? '';
-          if (widget.conversationId != null && convId != widget.conversationId)
-            return;
+        if (type == 'message.sent') {
+          final payload = json['payload'] as Map<String, dynamic>? ?? json;
 
-          final String senderId = json['sender_id']?.toString() ?? '';
+          final String convId = payload['conversation_id']?.toString() ?? '';
+          if (widget.conversationId != null && convId != widget.conversationId) return;
+
+          final String senderId = payload['sender_id']?.toString() ?? '';
           final bool isMe = senderId == _currentUserId;
-          final String body = json['body']?.toString() ?? '';
-          final String createdAt = json['created_at']?.toString() ?? '';
-          final String messageId = json['message_id']?.toString() ?? '';
+          final String body = payload['body']?.toString() ?? '';
+          final String createdAt = payload['created_at']?.toString() ?? '';
+          final String messageId = payload['message_id']?.toString() ??
+                                   payload['id']?.toString() ?? '';
+
+          // ✅ only skip if isMe AND message already exists locally
+          final bool alreadyExists = _messages.any((m) => m.text == body && m.isMe);
+          if (isMe && alreadyExists) return;
 
           setState(() {
             _isDoctorTyping = false;
@@ -136,7 +144,7 @@ class _ChatPageState extends State<ChatPage> {
                 id: messageId,
                 text: body,
                 isMe: isMe,
-                time: _formatTime(createdAt),
+                time: createdAt.isNotEmpty ? _formatTime(createdAt) : _currentTime(),
                 isRead: false,
               ),
             );
@@ -148,10 +156,11 @@ class _ChatPageState extends State<ChatPage> {
               messageId: messageId,
             );
           }
-
           _scrollToBottom();
-        } else if (type == 'typing') {
-          final String userId = json['user_id']?.toString() ?? '';
+
+        } else if (type == 'message.typing') {
+          final payload = json['payload'] as Map<String, dynamic>? ?? json;
+          final String userId = payload['user_id']?.toString() ?? '';
           if (userId != _currentUserId) {
             setState(() => _isDoctorTyping = true);
             _typingTimer?.cancel();
@@ -159,16 +168,19 @@ class _ChatPageState extends State<ChatPage> {
               if (mounted) setState(() => _isDoctorTyping = false);
             });
           }
-        } else if (type == 'read') {
-          final String messageId = json['message_id']?.toString() ?? '';
+
+        } else if (type == 'message.read') {
+          final payload = json['payload'] as Map<String, dynamic>? ?? json;
+          final String messageId = payload['message_id']?.toString() ?? '';
           setState(() {
             final index = _messages.indexWhere((m) => m.id == messageId);
             if (index != -1) {
               _messages[index] = _messages[index].copyWith(isRead: true);
             }
           });
-        } else if (type == 'pong') {
-          print('WebSocket: pong received — connection is alive ✅');
+
+        } else if (type == 'ping') { // ✅ backend sends type:ping payload:pong
+          print('WebSocket: pong received ✅');
         }
       } catch (e) {
         print('WebSocket parse error: $e');
@@ -248,9 +260,7 @@ class _ChatPageState extends State<ChatPage> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: isDark
-          ? const Color(0xFF121212)
-          : const Color(0xFFF5F6FA),
+      backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFF5F6FA),
       appBar: _buildAppBar(context, isDark),
       body: Column(
         children: [
@@ -392,14 +402,9 @@ class _ChatPageState extends State<ChatPage> {
           children: [
             Expanded(
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 8,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
-                  color: isDark
-                      ? const Color(0xFF2A2A2A)
-                      : const Color(0xFFF5F6FA),
+                  color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF5F6FA),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
                     color: isDark ? Colors.white12 : const Color(0xFFEBEBEB),
@@ -443,11 +448,7 @@ class _ChatPageState extends State<ChatPage> {
                     ),
                   ],
                 ),
-                child: const Icon(
-                  Icons.send_rounded,
-                  color: Colors.white,
-                  size: 16,
-                ),
+                child: const Icon(Icons.send_rounded, color: Colors.white, size: 16),
               ),
             ),
           ],
@@ -501,9 +502,7 @@ class _MessageBubble extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
-        mainAxisAlignment: message.isMe
-            ? MainAxisAlignment.end
-            : MainAxisAlignment.start,
+        mainAxisAlignment: message.isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           if (!message.isMe) ...[senderAvatar, const SizedBox(width: 6)],
@@ -524,12 +523,7 @@ class _MessageBubble extends StatelessWidget {
                 ),
                 boxShadow: message.isMe
                     ? null
-                    : [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 4,
-                        ),
-                      ],
+                    : [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4)],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,

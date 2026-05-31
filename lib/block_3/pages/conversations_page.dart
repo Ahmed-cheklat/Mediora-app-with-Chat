@@ -52,56 +52,55 @@ class _ConversationsPageState extends State<ConversationsPage> {
         ),
       ),
       body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: Color(0xFF2463EB)),
-            )
-          : _conversations.isEmpty
-              ? _buildEmpty(context)
-              : RefreshIndicator(
-                  color: const Color(0xFF2463EB),
-                  onRefresh: _loadConversations,
-                  child: ListView.builder(
-                    padding: EdgeInsets.symmetric(vertical: 8.h),
-                    itemCount: _conversations.length,
-                    itemBuilder: (context, index) {
-                      final conv =
-                          _conversations[index] as Map<String, dynamic>;
-                      final user =
-                          conv['user'] as Map<String, dynamic>? ?? {};
-                      final String conversationId =
-                          conv['id']?.toString() ?? '';
-                      final String firstName =
-                          user['first_name']?.toString() ?? 'Unknown';
-                      final String? lastName =
-                          user['last_name']?.toString();
-                      final String? avatarUrl =
-                          user['picture']?.toString();
-                      final String doctorId =
-                          user['id']?.toString() ?? '';
+    ? const Center(
+        child: CircularProgressIndicator(color: Color(0xFF2463EB)),
+      )
+    : _conversations.isEmpty
+        ? _buildEmpty(context)
+        : RefreshIndicator(
+            color: const Color(0xFF2463EB),
+            onRefresh: _loadConversations,
+            child: ListView.builder(
+              padding: EdgeInsets.symmetric(vertical: 8.h),
+              itemCount: _conversations.length,
+              itemBuilder: (context, index) {
+                final conv =
+                    _conversations[index] as Map<String, dynamic>;
+                final user =
+                    conv['user'] as Map<String, dynamic>? ?? {};
+                final String conversationId =
+                    conv['id']?.toString() ?? '';
+                final String firstName =
+                    conv['name']?.toString() ?? user['first_name']?.toString() ?? 'Unknown'; // ✅ changed
+                final String? lastName = null; // ✅ changed
+                final String? avatarUrl =
+                    user['picture']?.toString();
+                final String doctorId =
+                    user['id']?.toString() ?? '';
 
-                      return _ConversationTile(
-                        conversation: conv,
-                        firstName: firstName,
-                        lastName: lastName,
-                        avatarUrl: avatarUrl,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => ChatPage(
-                                firstName: firstName,
-                                lastName: lastName,
-                                doctorId: doctorId,
-                                avatarUrl: avatarUrl,
-                                conversationId: conversationId,
-                              ),
-                            ),
-                          );
-                        },
-                      );
-                    },
-                  ),
-                ),
+                return _ConversationTile(
+                  conversation: conv,
+                  firstName: firstName,
+                  lastName: lastName,
+                  avatarUrl: avatarUrl,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ChatPage(
+                          firstName: firstName,
+                          lastName: lastName,
+                          doctorId: doctorId,
+                          avatarUrl: avatarUrl,
+                          conversationId: conversationId,
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
     );
   }
 
