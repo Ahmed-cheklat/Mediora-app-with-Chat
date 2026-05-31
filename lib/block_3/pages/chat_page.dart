@@ -93,7 +93,8 @@ class _ChatPageState extends State<ChatPage> {
       final bool isMe = senderId == _currentUserId;
       final String body = msg['body']?.toString() ?? '';
       final String createdAt = msg['created_at']?.toString() ?? '';
-      final String messageId = msg['id']?.toString() ?? ''; // ✅ 'id' not 'message_id'
+      final String messageId =
+          msg['id']?.toString() ?? ''; // ✅ 'id' not 'message_id'
       return _ChatMessage(
         id: messageId,
         text: body,
@@ -124,17 +125,22 @@ class _ChatPageState extends State<ChatPage> {
           final payload = json['payload'] as Map<String, dynamic>? ?? json;
 
           final String convId = payload['conversation_id']?.toString() ?? '';
-          if (widget.conversationId != null && convId != widget.conversationId) return;
+          if (widget.conversationId != null && convId != widget.conversationId)
+            return;
 
           final String senderId = payload['sender_id']?.toString() ?? '';
           final bool isMe = senderId == _currentUserId;
           final String body = payload['body']?.toString() ?? '';
           final String createdAt = payload['created_at']?.toString() ?? '';
-          final String messageId = payload['message_id']?.toString() ??
-                                   payload['id']?.toString() ?? '';
+          final String messageId =
+              payload['message_id']?.toString() ??
+              payload['id']?.toString() ??
+              '';
 
           // ✅ only skip if isMe AND message already exists locally
-          final bool alreadyExists = _messages.any((m) => m.text == body && m.isMe);
+          final bool alreadyExists = _messages.any(
+            (m) => m.text == body && m.isMe,
+          );
           if (isMe && alreadyExists) return;
 
           setState(() {
@@ -144,7 +150,9 @@ class _ChatPageState extends State<ChatPage> {
                 id: messageId,
                 text: body,
                 isMe: isMe,
-                time: createdAt.isNotEmpty ? _formatTime(createdAt) : _currentTime(),
+                time: createdAt.isNotEmpty
+                    ? _formatTime(createdAt)
+                    : _currentTime(),
                 isRead: false,
               ),
             );
@@ -157,7 +165,6 @@ class _ChatPageState extends State<ChatPage> {
             );
           }
           _scrollToBottom();
-
         } else if (type == 'message.typing') {
           final payload = json['payload'] as Map<String, dynamic>? ?? json;
           final String userId = payload['user_id']?.toString() ?? '';
@@ -168,7 +175,6 @@ class _ChatPageState extends State<ChatPage> {
               if (mounted) setState(() => _isDoctorTyping = false);
             });
           }
-
         } else if (type == 'message.read') {
           final payload = json['payload'] as Map<String, dynamic>? ?? json;
           final String messageId = payload['message_id']?.toString() ?? '';
@@ -178,8 +184,8 @@ class _ChatPageState extends State<ChatPage> {
               _messages[index] = _messages[index].copyWith(isRead: true);
             }
           });
-
-        } else if (type == 'ping') { // ✅ backend sends type:ping payload:pong
+        } else if (type == 'ping') {
+          // ✅ backend sends type:ping payload:pong
           print('WebSocket: pong received ✅');
         }
       } catch (e) {
@@ -260,7 +266,9 @@ class _ChatPageState extends State<ChatPage> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFF5F6FA),
+      backgroundColor: isDark
+          ? const Color(0xFF121212)
+          : const Color(0xFFF5F6FA),
       appBar: _buildAppBar(context, isDark),
       body: Column(
         children: [
@@ -305,7 +313,87 @@ class _ChatPageState extends State<ChatPage> {
       actions: [
         _AppBarIconBtn(
           icon: Icons.more_vert_rounded,
-          onTap: () {},
+          onTap: () {
+            // ✅ show rename dialog
+            final TextEditingController nameController =
+                TextEditingController();
+            showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                backgroundColor: isDark
+                    ? const Color(0xFF1E1E1E)
+                    : Colors.white,
+                title: Text(
+                  'Rename Conversation',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.white : const Color(0xFF1A1D23),
+                  ),
+                ),
+                content: TextField(
+                  controller: nameController,
+                  autofocus: true,
+                  style: TextStyle(
+                    color: isDark ? Colors.white : const Color(0xFF1A1D23),
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'Enter new name',
+                    hintStyle: TextStyle(
+                      color: isDark ? Colors.white38 : const Color(0xFF999EAE),
+                    ),
+                    enabledBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(
+                        color: isDark
+                            ? Colors.white24
+                            : const Color(0xFFEBEBEB),
+                      ),
+                    ),
+                    focusedBorder: const UnderlineInputBorder(
+                      borderSide: BorderSide(color: Color(0xFF4C6EF5)),
+                    ),
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: Text(
+                      'Cancel',
+                      style: TextStyle(
+                        color: isDark ? Colors.white54 : Colors.grey,
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () async {
+                      final newName = nameController.text.trim();
+                      if (newName.isEmpty) return;
+                      Navigator.pop(ctx);
+                      final success = await ChatServices().modifyConversation(
+                        widget.conversationId!,
+                        name: newName,
+                      );
+                      if (success && mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Conversation renamed successfully'),
+                            backgroundColor: Color(0xFF4C6EF5),
+                          ),
+                        );
+                      }
+                    },
+                    child: const Text(
+                      'Save',
+                      style: TextStyle(
+                        color: Color(0xFF4C6EF5),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
           isDark: isDark,
         ),
         const SizedBox(width: 8),
@@ -402,9 +490,14 @@ class _ChatPageState extends State<ChatPage> {
           children: [
             Expanded(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF5F6FA),
+                  color: isDark
+                      ? const Color(0xFF2A2A2A)
+                      : const Color(0xFFF5F6FA),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
                     color: isDark ? Colors.white12 : const Color(0xFFEBEBEB),
@@ -448,7 +541,11 @@ class _ChatPageState extends State<ChatPage> {
                     ),
                   ],
                 ),
-                child: const Icon(Icons.send_rounded, color: Colors.white, size: 16),
+                child: const Icon(
+                  Icons.send_rounded,
+                  color: Colors.white,
+                  size: 16,
+                ),
               ),
             ),
           ],
@@ -502,7 +599,9 @@ class _MessageBubble extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
-        mainAxisAlignment: message.isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: message.isMe
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           if (!message.isMe) ...[senderAvatar, const SizedBox(width: 6)],
@@ -523,7 +622,12 @@ class _MessageBubble extends StatelessWidget {
                 ),
                 boxShadow: message.isMe
                     ? null
-                    : [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4)],
+                    : [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 4,
+                        ),
+                      ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,

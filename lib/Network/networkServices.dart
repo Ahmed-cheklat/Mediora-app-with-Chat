@@ -1382,17 +1382,18 @@ class ChatServices {
     }
   }
 
-  Future<bool> modifyConversation(String conversationId) async {
+  Future<bool> modifyConversation(String conversationId, {String? name}) async {
     try {
       const secureStorage = FlutterSecureStorage();
       final String? accessToken = await secureStorage.read(key: 'access_token');
 
       final response = await http.patch(
-        Uri.parse('$_baseUrl/chat/conversations/$conversationId/'),
+        Uri.parse('$_baseUrl/chat/conversations/:$conversationId/'),
         headers: {
           'Content-Type': 'application/json',
           if (accessToken != null) 'Authorization': 'Bearer $accessToken',
         },
+        body: jsonEncode({'name': ?name}),
       );
 
       print('modifyConversation status: ${response.statusCode}');
@@ -1401,7 +1402,9 @@ class ChatServices {
       if (response.statusCode == 200) return true;
       if (response.statusCode == 401) {
         final refreshed = await AuthService().getRefreshToken();
-        if (refreshed.success) return await modifyConversation(conversationId);
+        if (refreshed.success) {
+          return await modifyConversation(conversationId, name: name);
+        }
       }
       return false;
     } catch (e) {

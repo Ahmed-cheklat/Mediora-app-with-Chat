@@ -6,7 +6,6 @@ import 'package:mediora/block_0/pages/signin_with_hellopage/policies.dart';
 import 'package:mediora/block_0/pages/signin_with_hellopage/sign_in.dart';
 import 'package:mediora/block_4/pages/FAQ_page.dart';
 import 'package:mediora/block_4/pages/change_password_page.dart';
-import 'package:mediora/block_4/pages/delete_account_page.dart';
 import 'package:mediora/block_4/pages/edit_profile_page.dart';
 import 'package:mediora/block_4/pages/notification_modes_page.dart';
 import 'package:mediora/block_4/tools/themeProvider.dart';
@@ -209,9 +208,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           },
                         );
                         break;
-                      case 1:
-                        NavigateTo.pushTo(context, const DeleteAccountPage());
-                        break;
+                    
                     }
                   },
                 ),
@@ -340,7 +337,6 @@ final List<Map<String, dynamic>> preferencesActions = [
 
 final List<Map<String, dynamic>> accountActions = [
   {"title": "Log Out", "icon": Icons.logout},
-  {"title": "Delete Account", "icon": Icons.delete},
 ];
 
 class ActionsCardForAccountCustom extends StatelessWidget {
