@@ -1440,6 +1440,17 @@ class ChatServices {
     _channel!.sink.add(payload);
   }
 
+  // ping
+  void ping() {
+    if (_channel == null) {
+      print('WebSocket: not connected, cannot ping');
+      return;
+    }
+    final payload = jsonEncode({'type': 'ping'});
+    _channel!.sink.add(payload);
+    print('WebSocket ping sent');
+  }
+
   // Stream of incoming messages
   Stream? get messageStream => _channel?.stream;
 }

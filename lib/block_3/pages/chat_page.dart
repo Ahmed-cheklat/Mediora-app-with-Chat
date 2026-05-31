@@ -53,9 +53,15 @@ class _ChatPageState extends State<ChatPage> {
   @override
   void initState() {
     super.initState();
+    _connectWebSocket();
     _loadCurrentUser();
     _loadHistory();
     _listenToMessages();
+  }
+
+  Future<void> _connectWebSocket() async {
+    await ChatServices().connectToChat();
+    ChatServices().ping();
   }
 
   Future<void> _loadCurrentUser() async {
@@ -68,7 +74,9 @@ class _ChatPageState extends State<ChatPage> {
       if (mounted) setState(() => _isLoadingHistory = false);
       return;
     }
-    final data = await ChatServices().getConversationMessages(widget.conversationId!);
+    final data = await ChatServices().getConversationMessages(
+      widget.conversationId!,
+    );
     if (!mounted) return;
 
     final List<_ChatMessage> history = data.map((item) {
@@ -111,7 +119,8 @@ class _ChatPageState extends State<ChatPage> {
 
         if (type == 'message') {
           final String convId = json['conv_id']?.toString() ?? '';
-          if (widget.conversationId != null && convId != widget.conversationId) return;
+          if (widget.conversationId != null && convId != widget.conversationId)
+            return;
 
           final String senderId = json['sender_id']?.toString() ?? '';
           final bool isMe = senderId == _currentUserId;
@@ -121,13 +130,15 @@ class _ChatPageState extends State<ChatPage> {
 
           setState(() {
             _isDoctorTyping = false;
-            _messages.add(_ChatMessage(
-              id: messageId,
-              text: body,
-              isMe: isMe,
-              time: _formatTime(createdAt),
-              isRead: false,
-            ));
+            _messages.add(
+              _ChatMessage(
+                id: messageId,
+                text: body,
+                isMe: isMe,
+                time: _formatTime(createdAt),
+                isRead: false,
+              ),
+            );
           });
 
           if (!isMe && widget.conversationId != null) {
@@ -155,6 +166,8 @@ class _ChatPageState extends State<ChatPage> {
               _messages[index] = _messages[index].copyWith(isRead: true);
             }
           });
+        } else if (type == 'pong') {
+          print('WebSocket: pong received — connection is alive ✅');
         }
       } catch (e) {
         print('WebSocket parse error: $e');
@@ -167,13 +180,15 @@ class _ChatPageState extends State<ChatPage> {
     if (text.isEmpty || widget.conversationId == null) return;
 
     setState(() {
-      _messages.add(_ChatMessage(
-        id: '',
-        text: text,
-        isMe: true,
-        time: _currentTime(),
-        isRead: false,
-      ));
+      _messages.add(
+        _ChatMessage(
+          id: '',
+          text: text,
+          isMe: true,
+          time: _currentTime(),
+          isRead: false,
+        ),
+      );
     });
 
     _controller.clear();
@@ -232,7 +247,9 @@ class _ChatPageState extends State<ChatPage> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFF5F6FA),
+      backgroundColor: isDark
+          ? const Color(0xFF121212)
+          : const Color(0xFFF5F6FA),
       appBar: _buildAppBar(context, isDark),
       body: Column(
         children: [
@@ -318,7 +335,9 @@ class _ChatPageState extends State<ChatPage> {
 
   Widget _buildMessagesList(bool isDark) {
     if (_isLoadingHistory) {
-      return const Center(child: CircularProgressIndicator(color: Color(0xFF4C6EF5)));
+      return const Center(
+        child: CircularProgressIndicator(color: Color(0xFF4C6EF5)),
+      );
     }
     return ListView.builder(
       controller: _scrollController,
@@ -372,9 +391,14 @@ class _ChatPageState extends State<ChatPage> {
           children: [
             Expanded(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF5F6FA),
+                  color: isDark
+                      ? const Color(0xFF2A2A2A)
+                      : const Color(0xFFF5F6FA),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
                     color: isDark ? Colors.white12 : const Color(0xFFEBEBEB),
@@ -418,7 +442,11 @@ class _ChatPageState extends State<ChatPage> {
                     ),
                   ],
                 ),
-                child: const Icon(Icons.send_rounded, color: Colors.white, size: 16),
+                child: const Icon(
+                  Icons.send_rounded,
+                  color: Colors.white,
+                  size: 16,
+                ),
               ),
             ),
           ],
@@ -446,12 +474,12 @@ class _ChatMessage {
   });
 
   _ChatMessage copyWith({bool? isRead}) => _ChatMessage(
-        id: id,
-        text: text,
-        isMe: isMe,
-        time: time,
-        isRead: isRead ?? this.isRead,
-      );
+    id: id,
+    text: text,
+    isMe: isMe,
+    time: time,
+    isRead: isRead ?? this.isRead,
+  );
 }
 
 // ── Sub-widgets ───────────────────────────────────────────────────────────────
@@ -472,13 +500,12 @@ class _MessageBubble extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
-        mainAxisAlignment: message.isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: message.isMe
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          if (!message.isMe) ...[
-            senderAvatar,
-            const SizedBox(width: 6),
-          ],
+          if (!message.isMe) ...[senderAvatar, const SizedBox(width: 6)],
           Flexible(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
@@ -486,8 +513,8 @@ class _MessageBubble extends StatelessWidget {
                 color: message.isMe
                     ? const Color(0xFF4C6EF5)
                     : isDark
-                        ? const Color(0xFF2A2A2A)
-                        : Colors.white,
+                    ? const Color(0xFF2A2A2A)
+                    : Colors.white,
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(18),
                   topRight: const Radius.circular(18),
@@ -513,8 +540,8 @@ class _MessageBubble extends StatelessWidget {
                       color: message.isMe
                           ? Colors.white
                           : isDark
-                              ? Colors.white
-                              : const Color(0xFF1A1D23),
+                          ? Colors.white
+                          : const Color(0xFF1A1D23),
                       height: 1.5,
                     ),
                   ),
@@ -579,7 +606,11 @@ class _AppBarIconBtn extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
   final bool isDark;
-  const _AppBarIconBtn({required this.icon, required this.onTap, required this.isDark});
+  const _AppBarIconBtn({
+    required this.icon,
+    required this.onTap,
+    required this.isDark,
+  });
 
   @override
   Widget build(BuildContext context) {
