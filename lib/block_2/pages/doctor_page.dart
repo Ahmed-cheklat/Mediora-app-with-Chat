@@ -186,7 +186,7 @@ class _DoctorPageState extends State<DoctorPage> {
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            expandedHeight: 300,
+            expandedHeight: 300.h,
             pinned: true,
             leading: IconButton(
               onPressed: () => Navigator.pop(context),
@@ -212,18 +212,18 @@ class _DoctorPageState extends State<DoctorPage> {
                         shape: BoxShape.circle,
                         border: Border.all(
                           color: const Color(0xFF2463EB),
-                          width: 3,
+                          width: 3.w,
                         ),
                         boxShadow: [
                           BoxShadow(
                             color: const Color(0xFF2463EB).withOpacity(0.2),
-                            blurRadius: 20,
-                            spreadRadius: 4,
+                            blurRadius: 20.r,
+                            spreadRadius: 4.r,
                           ),
                         ],
                       ),
                       child: CircleAvatar(
-                        radius: 60,
+                        radius: 60.r,
                         backgroundColor: const Color(0xFFE8EFFD),
                         backgroundImage: hasValidPicture
                             ? NetworkImage(picture.toString())
@@ -247,13 +247,12 @@ class _DoctorPageState extends State<DoctorPage> {
                     ),
                     6.verticalSpace,
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 6,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 14.w,
+                        vertical: 6.h,
                       ),
                       decoration: BoxDecoration(
-                        //color: const Color(0xFF2463EB).withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(20.r),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -265,7 +264,7 @@ class _DoctorPageState extends State<DoctorPage> {
                             ),
                             decoration: BoxDecoration(
                               color: const Color(0xFF2463EB).withOpacity(0.12),
-                              borderRadius: BorderRadius.circular(20),
+                              borderRadius: BorderRadius.circular(20.r),
                             ),
                             child: Text(
                               specialty,
@@ -288,7 +287,7 @@ class _DoctorPageState extends State<DoctorPage> {
                                     widget.doctor["gender"].toLowerCase() == 'female'
                                     ? const Color(0xFFFF4D9E).withOpacity(0.12)
                                     : const Color(0xFF2463EB).withOpacity(0.12),
-                                borderRadius: BorderRadius.circular(20),
+                                borderRadius: BorderRadius.circular(20.r),
                               ),
                               child: Text(
                                 widget.doctor["gender"],
@@ -313,7 +312,7 @@ class _DoctorPageState extends State<DoctorPage> {
           ),
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(16.r),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -349,9 +348,9 @@ class _DoctorPageState extends State<DoctorPage> {
                     12.verticalSpace,
                     Card(
                       child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Text(
-                          description,
+                          padding: EdgeInsets.all(16.r),
+                          child: Text(
+                            description,
                           style: TextStyle(
                             fontSize: 13.sp,
                             height: 1.6,
@@ -371,14 +370,14 @@ class _DoctorPageState extends State<DoctorPage> {
                     12.verticalSpace,
                     Card(
                       child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 16.w,
+                          vertical: 8.h,
                         ),
-                        leading: const Icon(
+                        leading: Icon(
                           Icons.location_on,
                           color: Color(0xFF2463EB),
-                          size: 36,
+                          size: 36.r,
                         ),
                         title: Text(
                           clinicPos,
@@ -387,10 +386,10 @@ class _DoctorPageState extends State<DoctorPage> {
                             color: const Color(0xFF2463EB),
                           ),
                         ),
-                        trailing: const Icon(
+                        trailing: Icon(
                           Icons.open_in_new,
                           color: Color(0xFF2463EB),
-                          size: 18,
+                          size: 18.r,
                         ),
                       ),
                     ),
@@ -403,24 +402,24 @@ class _DoctorPageState extends State<DoctorPage> {
                     12.verticalSpace,
                     Card(
                       child: Padding(
-                        padding: const EdgeInsets.all(12),
+                        padding: EdgeInsets.all(12.r),
                         child: SizedBox(
-                          height: 140,
+                          height: 140.h,
                           child: ListView.separated(
                             scrollDirection: Axis.horizontal,
                             itemCount: clinicImages.length,
                             separatorBuilder: (_, __) => 10.horizontalSpace,
                             itemBuilder: (context, index) {
                               return ClipRRect(
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(10.r),
                                 child: Image.network(
                                   clinicImages[index],
-                                  width: 180,
-                                  height: 140,
+                                  width: 180.w,
+                                  height: 140.h,
                                   fit: BoxFit.cover,
                                   errorBuilder: (_, __, ___) => Container(
-                                    width: 180,
-                                    height: 140,
+                                    width: 180.w,
+                                    height: 140.h,
                                     color: isDark
                                         ? const Color(0xFF2A2A2A)
                                         : const Color(0xFFEEEEEE),
@@ -482,7 +481,6 @@ class _DoctorPageState extends State<DoctorPage> {
                     Card(
                       child: Column(
                         children: [
-                          // Header row
                           Container(
                             padding: EdgeInsets.symmetric(
                               horizontal: 16.h,
@@ -518,7 +516,6 @@ class _DoctorPageState extends State<DoctorPage> {
                               ],
                             ),
                           ),
-                          // Service rows
                           ...List.generate(otherServices.length, (index) {
                             final service =
                                 otherServices[index] as Map<String, dynamic>;
@@ -529,13 +526,13 @@ class _DoctorPageState extends State<DoctorPage> {
                                   onTap: () {
                                     showModalBottomSheet(
                                       context: context,
-                                      shape: const RoundedRectangleBorder(
+                                      shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.vertical(
-                                          top: Radius.circular(20),
+                                          top: Radius.circular(20.r),
                                         ),
                                       ),
                                       builder: (_) => Padding(
-                                        padding: const EdgeInsets.all(24),
+                                        padding: EdgeInsets.all(24.r),
                                         child: Column(
                                           mainAxisSize: MainAxisSize.min,
                                           crossAxisAlignment:
@@ -585,9 +582,9 @@ class _DoctorPageState extends State<DoctorPage> {
                                     );
                                   },
                                   child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 12,
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 16.w,
+                                      vertical: 12.h,
                                     ),
                                     child: Row(
                                       children: [
@@ -606,9 +603,9 @@ class _DoctorPageState extends State<DoctorPage> {
                                           ),
                                         ),
                                         8.horizontalSpace,
-                                        const Icon(
+                                        Icon(
                                           Icons.info_outline,
-                                          size: 16,
+                                          size: 16.r,
                                           color: Colors.grey,
                                         ),
                                       ],
@@ -637,7 +634,7 @@ class _DoctorPageState extends State<DoctorPage> {
                                   final username = patient['username']?.toString() ?? 'Anonymous';
                                   return Card(
                                     child: Padding(
-                                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+                                      padding: EdgeInsets.fromLTRB(16.w, 14.h, 16.w, 14.h),
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
@@ -717,31 +714,31 @@ class _DoctorPageState extends State<DoctorPage> {
                                  maxLines: 3,
                                  decoration: InputDecoration(
                                    hintText: 'Share your experience with this doctor...',
-                                   hintStyle: const TextStyle(color: Colors.grey),
-                                   border: OutlineInputBorder(
-                                     borderRadius: BorderRadius.circular(12),
-                                   ),
-                                   contentPadding: const EdgeInsets.all(12),
-                                 ),
-                               ),
-                               12.verticalSpace,
-                               SizedBox(
-                                 width: double.infinity,
-                                 child: ElevatedButton(
-                                   onPressed: _submitting ? null : _submitFeedback,
-                                   style: ElevatedButton.styleFrom(
-                                     backgroundColor: const Color(0xFF2463EB),
-                                     foregroundColor: Colors.white,
-                                     padding: const EdgeInsets.symmetric(vertical: 12),
-                                     shape: RoundedRectangleBorder(
-                                       borderRadius: BorderRadius.circular(12),
-                                     ),
-                                   ),
-                                   child: _submitting
-                                       ? const SizedBox(
-                                           width: 20,
-                                           height: 20,
-                                           child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                    hintStyle: const TextStyle(color: Colors.grey),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12.r),
+                                    ),
+                                    contentPadding: EdgeInsets.all(12.r),
+                                  ),
+                                ),
+                                12.verticalSpace,
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton(
+                                    onPressed: _submitting ? null : _submitFeedback,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF2463EB),
+                                      foregroundColor: Colors.white,
+                                      padding: EdgeInsets.symmetric(vertical: 12.h),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12.r),
+                                      ),
+                                    ),
+                                    child: _submitting
+                                        ? SizedBox(
+                                            width: 20.w,
+                                            height: 20.h,
+                                            child: CircularProgressIndicator(strokeWidth: 2.w, color: Colors.white),
                                          )
                                        : const Text('Submit Feedback', style: TextStyle(fontWeight: FontWeight.w600)),
                                  ),
@@ -753,37 +750,37 @@ class _DoctorPageState extends State<DoctorPage> {
                                  maxLines: 3,
                                  decoration: InputDecoration(
                                    hintText: 'Update your feedback...',
-                                   hintStyle: const TextStyle(color: Colors.grey),
-                                   border: OutlineInputBorder(
-                                     borderRadius: BorderRadius.circular(12),
-                                   ),
-                                   contentPadding: const EdgeInsets.all(12),
-                                 ),
-                               ),
-                               12.verticalSpace,
-                               Row(
+                                    hintStyle: const TextStyle(color: Colors.grey),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12.r),
+                                    ),
+                                    contentPadding: EdgeInsets.all(12.r),
+                                  ),
+                                ),
+                                12.verticalSpace,
+                                Row(
                                  children: [
                                    Expanded(
                                      child: ElevatedButton(
-                                       onPressed: _submitting ? null : _updateFeedback,
-                                       style: ElevatedButton.styleFrom(
-                                         backgroundColor: const Color(0xFF2463EB),
-                                         foregroundColor: Colors.white,
-                                         padding: const EdgeInsets.symmetric(vertical: 12),
-                                         shape: RoundedRectangleBorder(
-                                           borderRadius: BorderRadius.circular(12),
-                                         ),
-                                       ),
-                                       child: _submitting
-                                           ? const SizedBox(
-                                               width: 20,
-                                               height: 20,
-                                               child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                        onPressed: _submitting ? null : _updateFeedback,
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: const Color(0xFF2463EB),
+                                          foregroundColor: Colors.white,
+                                          padding: EdgeInsets.symmetric(vertical: 12.h),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(12.r),
+                                          ),
+                                        ),
+                                        child: _submitting
+                                            ? SizedBox(
+                                                width: 20.w,
+                                                height: 20.h,
+                                                child: CircularProgressIndicator(strokeWidth: 2.w, color: Colors.white),
                                              )
                                            : const Text('Update Feedback', style: TextStyle(fontWeight: FontWeight.w600)),
                                      ),
                                    ),
-                                   const SizedBox(width: 12),
+                                    SizedBox(width: 12.w),
                                    Expanded(
                                      child: OutlinedButton(
                                         onPressed: () async {
@@ -826,11 +823,11 @@ class _DoctorPageState extends State<DoctorPage> {
                                         },
                                        style: OutlinedButton.styleFrom(
                                          foregroundColor: Colors.red,
-                                         side: const BorderSide(color: Colors.red),
-                                         padding: const EdgeInsets.symmetric(vertical: 12),
-                                         shape: RoundedRectangleBorder(
-                                           borderRadius: BorderRadius.circular(12),
-                                         ),
+                                          side: const BorderSide(color: Colors.red),
+                                          padding: EdgeInsets.symmetric(vertical: 12.h),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(12.r),
+                                          ),
                                        ),
                                        child: const Text('Delete', style: TextStyle(fontWeight: FontWeight.w600)),
                                      ),
@@ -892,9 +889,9 @@ class _DoctorPageState extends State<DoctorPage> {
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF2463EB),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        padding: EdgeInsets.symmetric(vertical: 16.h),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
+                          borderRadius: BorderRadius.circular(14.r),
                         ),
                       ),
                     ),
@@ -982,7 +979,7 @@ class _InfoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
         child: Column(children: children),
       ),
     );
@@ -1003,10 +1000,10 @@ class _InfoRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
+      padding: EdgeInsets.symmetric(vertical: 10.h),
       child: Row(
         children: [
-          Icon(icon, color: const Color(0xFF2463EB), size: 20),
+          Icon(icon, color: const Color(0xFF2463EB), size: 20.r),
           12.horizontalSpace,
           Text(
             label,
@@ -1034,7 +1031,7 @@ class _Divider extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Divider(
-      height: 1,
+      height: 1.h,
       color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE),
     );
   }

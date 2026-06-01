@@ -240,7 +240,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                             color: isDark
                                 ? const Color(0xFF121212)
                                 : Colors.white,
-                            width: 2.5,
+                            width: 2.5.w,
                           ),
                         ),
                         child: Icon(
@@ -311,12 +311,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
             _SectionLabel(label: 'Gender'),
             8.verticalSpace,
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
+              padding: EdgeInsets.symmetric(horizontal: 14.w),
               decoration: BoxDecoration(
                 color: isDark
                     ? const Color(0xFF1E1E1E)
                     : const Color(0xFFF3F4F6),
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(14.r),
               ),
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
@@ -340,7 +340,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         children: [
                           Icon(
                             Icons.circle,
-                            size: 10,
+                            size: 10.r,
                             color: g == 'Male'
                                 ? const Color(0xFF2463EB)
                                 : const Color(0xFFFF4D9E),
@@ -363,22 +363,22 @@ class _EditProfilePageState extends State<EditProfilePage> {
             GestureDetector(
               onTap: _pickDate,
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 16,
+                padding: EdgeInsets.symmetric(
+                  horizontal: 14.w,
+                  vertical: 16.h,
                 ),
                 decoration: BoxDecoration(
                   color: isDark
                       ? const Color(0xFF1E1E1E)
                       : const Color(0xFFF3F4F6),
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(14.r),
                 ),
                 child: Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.cake_outlined,
                       color: Color(0xFF2463EB),
-                      size: 20,
+                      size: 20.r,
                     ),
                     12.horizontalSpace,
                     Text(
@@ -410,9 +410,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 onPressed: _isSaving ? null : _onSave,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF2463EB),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  padding: EdgeInsets.symmetric(vertical: 16.h),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(14.r),
                   ),
                 ),
                 child: _isSaving
@@ -574,26 +574,26 @@ class _EditableFieldState extends State<_EditableField> {
             : (widget.isDark
                   ? const Color(0xFF2A2A2A)
                   : const Color(0xFFEEEEEE)),
-        contentPadding: const EdgeInsets.symmetric(vertical: 16),
+        contentPadding: EdgeInsets.symmetric(vertical: 16.h),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xFF2463EB), width: 1.5),
+          borderRadius: BorderRadius.circular(14.r),
+          borderSide: BorderSide(color: Color(0xFF2463EB), width: 1.5.w),
         ),
         disabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(14.r),
           borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xFF2463EB), width: 1.5),
+          borderRadius: BorderRadius.circular(14.r),
+          borderSide: BorderSide(color: Color(0xFF2463EB), width: 1.5.w),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Colors.red, width: 1.5),
+          borderRadius: BorderRadius.circular(14.r),
+          borderSide: BorderSide(color: Colors.red, width: 1.5.w),
         ),
         focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Colors.red, width: 1.5),
+          borderRadius: BorderRadius.circular(14.r),
+          borderSide: BorderSide(color: Colors.red, width: 1.5.w),
         ),
       ),
     );
@@ -654,17 +654,17 @@ class _EditableFieldUsernameState extends State<_EditableFieldUsername> {
         return null;
       },
       decoration: InputDecoration(
-        prefixIcon: const Icon(
+        prefixIcon: Icon(
           Icons.alternate_email,
           color: Color(0xFF2463EB),
-          size: 20,
+          size: 20.r,
         ),
         suffixIcon: GestureDetector(
           onTap: widget.onToggle,
           child: Icon(
             widget.isEditable ? Icons.check : Icons.edit,
             color: widget.isEditable ? Colors.green : const Color(0xFF2463EB),
-            size: 18,
+            size: 18.r,
           ),
         ),
         filled: true,
@@ -675,26 +675,26 @@ class _EditableFieldUsernameState extends State<_EditableFieldUsername> {
             : (widget.isDark
                   ? const Color(0xFF2A2A2A)
                   : const Color(0xFFEEEEEE)),
-        contentPadding: const EdgeInsets.symmetric(vertical: 16),
+        contentPadding: EdgeInsets.symmetric(vertical: 16.h),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xFF2463EB), width: 1.5),
+          borderRadius: BorderRadius.circular(14.r),
+          borderSide: BorderSide(color: Color(0xFF2463EB), width: 1.5.w),
         ),
         disabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(14.r),
           borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xFF2463EB), width: 1.5),
+          borderRadius: BorderRadius.circular(14.r),
+          borderSide: BorderSide(color: Color(0xFF2463EB), width: 1.5.w),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Colors.red, width: 1.5),
+          borderRadius: BorderRadius.circular(14.r),
+          borderSide: BorderSide(color: Colors.red, width: 1.5.w),
         ),
         focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Colors.red, width: 1.5),
+          borderRadius: BorderRadius.circular(14.r),
+          borderSide: BorderSide(color: Colors.red, width: 1.5.w),
         ),
       ),
     );

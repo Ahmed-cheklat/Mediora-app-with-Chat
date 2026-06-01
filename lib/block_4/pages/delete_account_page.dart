@@ -37,7 +37,6 @@ class _DeleteAccountPageState extends State<DeleteAccountPage> {
         child: SafeArea(
           child: ListView(
             children: [
-              //card of goodbye
               SizedBox(
                 //height: 200.h,
                 child: Card(
@@ -51,7 +50,7 @@ class _DeleteAccountPageState extends State<DeleteAccountPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Padding(
-                          padding: EdgeInsets.only(left: 9.0),
+                          padding: EdgeInsets.only(left: 9.0.w),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.start,
                             children: [
@@ -66,7 +65,7 @@ class _DeleteAccountPageState extends State<DeleteAccountPage> {
                         ),
                         5.verticalSpace,
                         Padding(
-                          padding: const EdgeInsets.all(8.0),
+                          padding: EdgeInsets.all(8.0.r),
                           child: Text(
                             'This action is irreversible. All of your data, history, and records will be permanently removed. You will not be able to reactivate this account.',
                             style: TextStyle(
@@ -181,7 +180,6 @@ class _DeleteAccountPageState extends State<DeleteAccountPage> {
                       );
                       return;
                     }
-                    // all good → show confirm dialog
                     ConfirmDialog.show(
                       context,
                       title: 'Are you sure? This action cannot be undone.',
@@ -202,7 +200,7 @@ class _DeleteAccountPageState extends State<DeleteAccountPage> {
                       borderRadius: BorderRadius.circular(15.r),
                       side: BorderSide(
                         color: Colors.red.withOpacity(0.3), // 👈 subtle red border
-                        width: 1.5,
+                        width: 1.5.w,
                       ),
                     ),
                   ),
@@ -292,14 +290,12 @@ class _CurrentPasswordFieldState extends State<CurrentPasswordField> {
       controller: widget.controller,
       focusNode: _focusNode,
       obscureText: _obscureText,
-      // --- ADDED VALIDATOR HERE ---
       validator: (value) {
         if (value == null || value.trim().isEmpty) {
           return 'Please enter your current password';
         }
-        return null; // Returning null means the input is valid
+        return null;
       },
-      // ----------------------------
       style: TextStyle(fontFamily: 'LineSeedJP', fontSize: 14.sp),
       decoration: InputDecoration(
         hintText: 'Enter your current password',

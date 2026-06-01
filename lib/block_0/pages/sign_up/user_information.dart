@@ -27,7 +27,7 @@ class _UserInformationState extends State<UserInformation> {
           key: _formKey,
           child: SingleChildScrollView(
             child: Padding(
-              padding: const EdgeInsets.all(8.0),
+              padding: EdgeInsets.all(8.0.r),
               child: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -258,7 +258,7 @@ class NameField extends StatelessWidget {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(15.r),
-          borderSide: const BorderSide(color: Color(0xFF2463EB), width: 2),
+          borderSide: BorderSide(color: Color(0xFF2463EB), width: 2.w),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(15.r),
@@ -266,7 +266,7 @@ class NameField extends StatelessWidget {
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(15.r),
-          borderSide: const BorderSide(color: Colors.red, width: 2),
+          borderSide: BorderSide(color: Colors.red, width: 2.w),
         ),
       ),
     );
@@ -318,7 +318,7 @@ class UsernameField extends StatelessWidget {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(15.r),
-          borderSide: const BorderSide(color: Color(0xFF2463EB), width: 2),
+          borderSide: BorderSide(color: Color(0xFF2463EB), width: 2.w),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(15.r),
@@ -326,7 +326,7 @@ class UsernameField extends StatelessWidget {
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(15.r),
-          borderSide: const BorderSide(color: Colors.red, width: 2),
+          borderSide: BorderSide(color: Colors.red, width: 2.w),
         ),
       ),
     );

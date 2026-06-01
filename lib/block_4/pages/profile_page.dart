@@ -397,7 +397,7 @@ class ConfirmDialog {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text(title, style: const TextStyle(fontSize: 15)),
+        title: Text(title, style: TextStyle(fontSize: 15.sp)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),

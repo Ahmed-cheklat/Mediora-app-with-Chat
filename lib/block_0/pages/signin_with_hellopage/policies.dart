@@ -1,40 +1,41 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 final List<Map<String, String>> privacyPolicyData = [
   {
     "title": "Introduction",
     "content":
-        "Your privacy and the security of your health data are our highest priorities. This Privacy Policy explains how our Telemedicine Application collects, uses, and safeguards your information when you use our services. Last updated: May 2026."
+        "Your privacy and the security of your data are our highest priorities. This Privacy Policy explains how Mediora collects, uses, and safeguards your information when you use our medical reservation platform. Last updated: June 2026."
   },
   {
     "title": "1. Information We Collect",
     "content":
-        "We collect personal identification (full name, email, phone number), medical & appointment history data, and basic device usage information to optimize your user experience."
+        "We collect personal identification details (full name, email, phone number), appointment histories, secure in-app chat conversations with doctors, and any feedback or reviews you post on doctor profiles."
   },
   {
     "title": "2. How We Use Your Information",
     "content":
-        "We use your data strictly to manage your medical appointments on your home screen, enable direct communication with clinics via email/phone links, and automatically apply system themes like Light or Dark mode."
+        "We use your data strictly to process your appointment reservations, facilitate real-time chatting with medical providers, publish your submitted reviews on doctor profiles, and enhance your doctor search results."
   },
   {
     "title": "3. Data Sharing and Disclosure",
     "content":
-        "We maintain a strict confidentiality rule. We never sell, rent, or trade your personal or medical data with third-party advertisers. Data is only shared with the specific medical providers you choose to book appointments with."
+        "We maintain a strict confidentiality rule. We never sell, rent, or trade your data with third-party advertisers. Your profile and chat details are shared exclusively with the specific doctors you book or converse with. Patient feedback and reviews are visible publicly on the respective doctor's profile."
   },
   {
     "title": "4. Data Security & Storage",
     "content":
-        "We implement industry-standard security measures. All data transmitted between this mobile application and our backend cloud servers is fully encrypted, and profile data is stored in secure databases."
+        "We implement industry-standard security protocols. All data transmitted between the Mediora mobile application and our cloud servers—including your chat history and reservation details—is fully encrypted and stored in secure databases."
   },
   {
     "title": "5. Your Rights",
     "content":
-        "You maintain complete control over your information. At any point through the application settings, you have the right to access your stored personal data or request the permanent deletion of your account and appointment history."
+        "You maintain control over your personal profile data. You have the right to access, review, and update your information at any time through the application settings. Please note that direct account deletion is not supported within the app to ensure the integrity and continuity of active reservation records and medical communication logs."
   },
   {
     "title": "6. Changes to This Policy",
     "content":
-        "We reserve the right to update this Privacy Policy as our app introduces new features or complies with changing healthcare regulations. We encourage users to review this section periodically."
+        "We reserve the right to update this Privacy Policy as Mediora introduces new features or complies with changing healthcare platform regulations. We encourage users to review this section periodically."
   },
 ];
 
@@ -60,93 +61,90 @@ class Policies extends StatelessWidget {
           // ── Header ──────────────────────────────────
           SliverToBoxAdapter(
             child: Container(
-              padding: const EdgeInsets.fromLTRB(24, 60, 24, 32),
+              padding: EdgeInsets.fromLTRB(24.w, 60.h, 24.w, 32.h),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // back button
                   GestureDetector(
                     onTap: () => Navigator.of(context).pop(),
                     child: Container(
-                      width: 40,
-                      height: 40,
+                      width: 40.w,
+                      height: 40.h,
                       decoration: BoxDecoration(
                         color: cardColor,
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(12.r),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withOpacity(isDark ? 0.3 : 0.06),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
+                            blurRadius: 8.r,
+                            offset: Offset(0, 2.h),
                           ),
                         ],
                       ),
                       child: Icon(
                         Icons.arrow_back_ios_new_rounded,
-                        size: 16,
+                        size: 16.r,
                         color: textPrimary,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 28),
+                  SizedBox(height: 28.h),
 
-                  // pill label
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
                     decoration: BoxDecoration(
                       color: accentColor.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(20.r),
                     ),
                     child: Text(
                       'LEGAL',
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 11.sp,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 1.4,
                         color: accentColor,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12.h),
 
                   Text(
                     'Privacy Policy &\nData Protection',
                     style: TextStyle(
-                      fontSize: 30,
+                      fontSize: 30.sp,
                       fontWeight: FontWeight.w800,
                       height: 1.2,
                       color: textPrimary,
                       letterSpacing: -0.5,
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  SizedBox(height: 10.h),
                   Text(
                     'How we collect, use, and protect your information.',
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 14.sp,
                       color: textSecondary,
                       height: 1.5,
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  SizedBox(height: 24.h),
 
-                  // last updated chip
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                    padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 7.h),
                     decoration: BoxDecoration(
                       color: cardColor,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(10.r),
                       border: Border.all(color: dividerColor),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.access_time_rounded, size: 13, color: textSecondary),
-                        const SizedBox(width: 6),
+                        Icon(Icons.access_time_rounded, size: 13.r, color: textSecondary),
+                        SizedBox(width: 6.w),
                         Text(
                           'Last updated: May 2026',
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: 12.sp,
                             color: textSecondary,
                             fontWeight: FontWeight.w500,
                           ),
@@ -161,7 +159,7 @@ class Policies extends StatelessWidget {
 
           // ── Policy Sections ──────────────────────────
           SliverPadding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 60),
+            padding: EdgeInsets.fromLTRB(20.w, 0, 20.w, 60.h),
             sliver: SliverList(
               delegate: SliverChildBuilderDelegate(
                 (context, index) {
@@ -189,30 +187,30 @@ class Policies extends StatelessWidget {
           // ── Footer ──────────────────────────────────
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 48),
+              padding: EdgeInsets.fromLTRB(20.w, 0, 20.w, 48.h),
               child: Container(
-                padding: const EdgeInsets.all(20),
+                padding: EdgeInsets.all(20.r),
                 decoration: BoxDecoration(
                   color: accentColor.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(16.r),
                   border: Border.all(color: accentColor.withOpacity(0.2)),
                 ),
                 child: Row(
                   children: [
                     Container(
-                      width: 40,
-                      height: 40,
+                      width: 40.w,
+                      height: 40.h,
                       decoration: BoxDecoration(
                         color: accentColor,
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(12.r),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.shield_rounded,
                         color: Colors.white,
-                        size: 20,
+                        size: 20.r,
                       ),
                     ),
-                    const SizedBox(width: 14),
+                    SizedBox(width: 14.w),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -220,16 +218,16 @@ class Policies extends StatelessWidget {
                           Text(
                             'Your data is protected',
                             style: TextStyle(
-                              fontSize: 13,
+                              fontSize: 13.sp,
                               fontWeight: FontWeight.w700,
                               color: textPrimary,
                             ),
                           ),
-                          const SizedBox(height: 3),
+                          SizedBox(height: 3.h),
                           Text(
                             'End-to-end encrypted & never sold.',
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: 12.sp,
                               color: textSecondary,
                             ),
                           ),
@@ -273,7 +271,6 @@ class _PolicySection extends StatelessWidget {
     required this.isDark,
   });
 
-  // icon per section
   IconData get _icon {
     switch (index) {
       case 0: return Icons.info_outline_rounded;
@@ -296,29 +293,27 @@ class _PolicySection extends StatelessWidget {
           // ── Timeline column ──
           Column(
             children: [
-              // dot
               Container(
-                width: 36,
-                height: 36,
+                width: 36.w,
+                height: 36.h,
                 decoration: BoxDecoration(
                   color: accentColor,
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(10.r),
                   boxShadow: [
                     BoxShadow(
                       color: accentColor.withOpacity(0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
+                      blurRadius: 8.r,
+                      offset: Offset(0, 3.h),
                     ),
                   ],
                 ),
-                child: Icon(_icon, color: Colors.white, size: 17),
+                child: Icon(_icon, color: Colors.white, size: 17.r),
               ),
-              // line
               if (!isLast)
                 Expanded(
                   child: Container(
-                    width: 2,
-                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    width: 2.w,
+                    margin: EdgeInsets.symmetric(vertical: 4.h),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
@@ -328,29 +323,29 @@ class _PolicySection extends StatelessWidget {
                           accentColor.withOpacity(0.05),
                         ],
                       ),
-                      borderRadius: BorderRadius.circular(2),
+                      borderRadius: BorderRadius.circular(2.r),
                     ),
                   ),
                 ),
             ],
           ),
-          const SizedBox(width: 14),
+          SizedBox(width: 14.w),
 
           // ── Content card ──
           Expanded(
             child: Padding(
-              padding: EdgeInsets.only(bottom: isLast ? 0 : 16),
+              padding: EdgeInsets.only(bottom: isLast ? 0 : 16.h),
               child: Container(
-                padding: const EdgeInsets.all(18),
+                padding: EdgeInsets.all(18.r),
                 decoration: BoxDecoration(
                   color: cardColor,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(16.r),
                   border: Border.all(color: dividerColor),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
+                      blurRadius: 8.r,
+                      offset: Offset(0, 2.h),
                     ),
                   ],
                 ),
@@ -360,17 +355,17 @@ class _PolicySection extends StatelessWidget {
                     Text(
                       title,
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 14.sp,
                         fontWeight: FontWeight.w700,
                         color: textPrimary,
                         letterSpacing: -0.2,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8.h),
                     Text(
                       content,
                       style: TextStyle(
-                        fontSize: 13.5,
+                        fontSize: 13.5.sp,
                         color: textSecondary,
                         height: 1.6,
                       ),

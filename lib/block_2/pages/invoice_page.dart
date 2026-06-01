@@ -23,21 +23,21 @@ class InvoicePage extends StatelessWidget {
         ),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(16.r),
         children: [
           // ── Confirmed header ──────────────────────────────────
           Column(
             children: [
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all(16.r),
                 decoration: BoxDecoration(
                   color: Colors.green.withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.check_circle_rounded,
                   color: Colors.green,
-                  size: 56,
+                  size: 56.r,
                 ),
               ),
               12.verticalSpace,
@@ -56,7 +56,7 @@ class InvoicePage extends StatelessWidget {
           // ── Patient Details ───────────────────────────────────
           Card(
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(16.r),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -88,7 +88,7 @@ class InvoicePage extends StatelessWidget {
           // ── QR Code ───────────────────────────────────────────
           Card(
             child: Padding(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(24.r),
               child: Column(
                 children: [
                   Text(
@@ -101,14 +101,14 @@ class InvoicePage extends StatelessWidget {
                   ),
                   16.verticalSpace,
                   Container(
-                    width: 180,
-                    height: 180,
+                    width: 180.w,
+                    height: 180.h,
                     decoration: BoxDecoration(
                       border: Border.all(
                         color: const Color(0xFF2463EB).withOpacity(0.3),
-                        width: 2,
+                        width: 2.w,
                       ),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(12.r),
                       color: isDark
                           ? const Color(0xFF2A2A2A)
                           : const Color(0xFFF3F4F6),
@@ -118,7 +118,7 @@ class InvoicePage extends StatelessWidget {
                       children: [
                         Icon(
                           Icons.qr_code_2_rounded,
-                          size: 80,
+                          size: 80.r,
                           color: isDark ? Colors.white24 : Colors.black12,
                         ),
                         8.verticalSpace,
@@ -138,7 +138,7 @@ class InvoicePage extends StatelessWidget {
           // ── Consultation Fee + Date ───────────────────────────
           Card(
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(16.r),
               child: Column(
                 children: [
                   _InvoiceRow(
@@ -176,9 +176,7 @@ class InvoicePage extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: () {
-                // handle download ticket
-              },
+              onPressed: () {},
               icon: const Icon(Icons.download_rounded, color: Colors.white),
               label: Text(
                 'Download Ticket',
@@ -190,9 +188,9 @@ class InvoicePage extends StatelessWidget {
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF2463EB),
-                padding: const EdgeInsets.symmetric(vertical: 16),
+                padding: EdgeInsets.symmetric(vertical: 16.h),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(14.r),
                 ),
               ),
             ),
@@ -207,7 +205,6 @@ class InvoicePage extends StatelessWidget {
                   MaterialPageRoute(builder: (context) => Homepage()),
                   (route) => false,
                 );
-                // handle download ticket
               },
               label: Text(
                 'Done',
@@ -251,10 +248,10 @@ class _InvoiceRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
+      padding: EdgeInsets.symmetric(vertical: 10.h),
       child: Row(
         children: [
-          Icon(icon, color: const Color(0xFF2463EB), size: 20),
+          Icon(icon, color: const Color(0xFF2463EB), size: 20.r),
           12.horizontalSpace,
           Text(
             label,
@@ -286,7 +283,7 @@ class _InvoiceDivider extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Divider(
-      height: 1,
+      height: 1.h,
       color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE),
     );
   }

@@ -47,7 +47,7 @@ class _BookAndPayPageState extends State<BookAndPayPage> {
   int _toApiDow(DateTime date) => date.weekday - 1;
   List<DateTime> get _next7Days {
     final tomorrow = DateTime.now().add(const Duration(days: 1));
-    return List.generate(7, (i) => tomorrow.add(Duration(days: i)));
+    return List.generate(6, (i) => tomorrow.add(Duration(days: i)));
   }
 
   bool _isDayOff(DateTime date) => !_scheduleMap.containsKey(_toApiDow(date));
@@ -61,12 +61,10 @@ class _BookAndPayPageState extends State<BookAndPayPage> {
   String _formatTime(String? raw) {
     if (raw == null || raw.isEmpty) return '--:--';
     try {
-      // Try full ISO first
       final dt = DateTime.tryParse(raw);
       if (dt != null) {
         return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
       }
-      // Fallback: just take HH:mm from the string
       return raw.substring(0, 5);
     } catch (_) {
       return raw.length >= 5 ? raw.substring(0, 5) : raw;
@@ -110,7 +108,7 @@ class _BookAndPayPageState extends State<BookAndPayPage> {
     if (!doctorIsFree.success) {
       CustomSnackBarForSignUp.show(
         context,
-        message: 'Doctor is not available on this day',
+        message: doctorIsFree.message,
         icon: Icons.event_busy_outlined,
         backgroundColor: Colors.red,
       );
@@ -203,7 +201,7 @@ class _BookAndPayPageState extends State<BookAndPayPage> {
 
       // ── Confirm button always at bottom ──────────────────────
       bottomNavigationBar: Padding(
-        padding: EdgeInsets.fromLTRB(16.w, 0, 16.w, 24.h),
+        padding: EdgeInsets.fromLTRB(16.w, 0.h, 16.w, 24.h),
         child: SizedBox(
           width: double.infinity,
           child: ElevatedButton(
@@ -213,18 +211,18 @@ class _BookAndPayPageState extends State<BookAndPayPage> {
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF2463EB),
               disabledBackgroundColor: Colors.grey.shade400,
-              padding: const EdgeInsets.symmetric(vertical: 16),
+              padding: EdgeInsets.symmetric(vertical: 16.h),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(14.r),
               ),
             ),
             child: _isConfirming
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
+                ? SizedBox(
+                    height: 20.h,
+                    width: 20.w,
                     child: CircularProgressIndicator(
                       color: Colors.white,
-                      strokeWidth: 2,
+                      strokeWidth: 2.w,
                     ),
                   )
                 : Text(
@@ -242,17 +240,17 @@ class _BookAndPayPageState extends State<BookAndPayPage> {
       body: _isLoadingSchedule
           ? const Center(child: CircularProgressIndicator(color: Color(0xFF2463EB)))
           : ListView(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(16.r),
               children: [
                 // ── Doctor Card ─────────────────────────────────
                 Card(
                   child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 12.w,
+                      vertical: 8.h,
                     ),
                     leading: CircleAvatar(
-                      radius: 28,
+                      radius: 28.r,
                       backgroundColor: const Color(0xFFE8EFFD),
                       backgroundImage: hasValidPicture
                           ? NetworkImage(picture.toString())
@@ -284,7 +282,7 @@ class _BookAndPayPageState extends State<BookAndPayPage> {
                 ),
                 12.verticalSpace,
                 SizedBox(
-                  height: 100,
+                  height: 100.h,
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
                     itemCount: days.length,
@@ -299,8 +297,8 @@ class _BookAndPayPageState extends State<BookAndPayPage> {
                             : () => setState(() => _selectedDayIndex = index),
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
-                          margin: const EdgeInsets.only(right: 10),
-                          width: 68,
+                          margin: EdgeInsets.only(right: 10.w),
+                          width: 68.w,
                           decoration: BoxDecoration(
                             color: isDayOff
                                 ? (isDark
@@ -311,7 +309,7 @@ class _BookAndPayPageState extends State<BookAndPayPage> {
                                 : (isDark
                                       ? const Color(0xFF1E1E1E)
                                       : Colors.white),
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(14.r),
                             border: Border.all(
                               color: isSelected
                                   ? const Color(0xFF2463EB)
@@ -323,8 +321,8 @@ class _BookAndPayPageState extends State<BookAndPayPage> {
                                       color: const Color(
                                         0xFF2463EB,
                                       ).withOpacity(0.3),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 3),
+                                      blurRadius: 8.r,
+                                      offset: Offset(0, 3.h),
                                     ),
                                   ]
                                 : [],

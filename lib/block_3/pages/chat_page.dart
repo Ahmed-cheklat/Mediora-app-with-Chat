@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:mediora/Network/networkServices.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class ChatPage extends StatefulWidget {
   final String firstName;
@@ -94,7 +95,7 @@ class _ChatPageState extends State<ChatPage> {
       final String body = msg['body']?.toString() ?? '';
       final String createdAt = msg['created_at']?.toString() ?? '';
       final String messageId =
-          msg['id']?.toString() ?? ''; // ✅ 'id' not 'message_id'
+          msg['id']?.toString() ?? '';
       return _ChatMessage(
         id: messageId,
         text: body,
@@ -137,7 +138,6 @@ class _ChatPageState extends State<ChatPage> {
               payload['id']?.toString() ??
               '';
 
-          // ✅ only skip if isMe AND message already exists locally
           final bool alreadyExists = _messages.any(
             (m) => m.text == body && m.isMe,
           );
@@ -185,7 +185,6 @@ class _ChatPageState extends State<ChatPage> {
             }
           });
         } else if (type == 'ping') {
-          // ✅ backend sends type:ping payload:pong
           print('WebSocket: pong received ✅');
         }
       } catch (e) {
@@ -288,20 +287,20 @@ class _ChatPageState extends State<ChatPage> {
       leading: IconButton(
         icon: Icon(
           Icons.chevron_left_rounded,
-          size: 28,
+          size: 28.r,
           color: isDark ? Colors.white70 : const Color(0xFF555B72),
         ),
         onPressed: () => Navigator.pop(context),
       ),
       title: Row(
         children: [
-          _buildAvatar(radius: 20),
-          const SizedBox(width: 10),
+          _buildAvatar(radius: 20.r),
+          SizedBox(width: 10.w),
           Expanded(
             child: Text(
               _displayName,
               style: TextStyle(
-                fontSize: 15,
+                fontSize: 15.sp,
                 fontWeight: FontWeight.w600,
                 color: isDark ? Colors.white : const Color(0xFF1A1D23),
               ),
@@ -314,7 +313,6 @@ class _ChatPageState extends State<ChatPage> {
         _AppBarIconBtn(
           icon: Icons.more_vert_rounded,
           onTap: () {
-            // ✅ show rename dialog
             final TextEditingController nameController =
                 TextEditingController();
             showDialog(
@@ -326,7 +324,7 @@ class _ChatPageState extends State<ChatPage> {
                 title: Text(
                   'Rename Conversation',
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: 16.sp,
                     fontWeight: FontWeight.w600,
                     color: isDark ? Colors.white : const Color(0xFF1A1D23),
                   ),
@@ -396,13 +394,13 @@ class _ChatPageState extends State<ChatPage> {
           },
           isDark: isDark,
         ),
-        const SizedBox(width: 8),
+        SizedBox(width: 8.w),
       ],
       bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(0.5),
+        preferredSize: Size.fromHeight(0.5.h),
         child: Container(
           color: isDark ? Colors.white12 : const Color(0xFFEBEBEB),
-          height: 0.5,
+          height: 0.5.h,
         ),
       ),
     );
@@ -440,7 +438,7 @@ class _ChatPageState extends State<ChatPage> {
     }
     return ListView.builder(
       controller: _scrollController,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 14.h),
       itemCount: _messages.length + 1,
       itemBuilder: (context, index) {
         if (index == 0) return const _DateDivider(label: 'Today');
@@ -448,7 +446,7 @@ class _ChatPageState extends State<ChatPage> {
         return _MessageBubble(
           message: msg,
           isDark: isDark,
-          senderAvatar: _buildAvatar(radius: 13),
+          senderAvatar: _buildAvatar(radius: 13.r),
         );
       },
     );
@@ -456,21 +454,21 @@ class _ChatPageState extends State<ChatPage> {
 
   Widget _buildTypingIndicator(bool isDark) {
     return Padding(
-      padding: const EdgeInsets.only(left: 16, bottom: 4),
+      padding: EdgeInsets.only(left: 16.w, bottom: 4.h),
       child: Row(
         children: [
-          _buildAvatar(radius: 13),
-          const SizedBox(width: 8),
+          _buildAvatar(radius: 13.r),
+          SizedBox(width: 8.w),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF2A2A2A) : Colors.white,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(16.r),
             ),
             child: Text(
               'typing...',
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 12.sp,
                 color: isDark ? Colors.white54 : Colors.grey[500],
                 fontStyle: FontStyle.italic,
               ),
@@ -484,21 +482,21 @@ class _ChatPageState extends State<ChatPage> {
   Widget _buildInputBar(bool isDark) {
     return Container(
       color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
       child: SafeArea(
         child: Row(
           children: [
             Expanded(
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 8,
+                padding: EdgeInsets.symmetric(
+                  horizontal: 14.w,
+                  vertical: 8.h,
                 ),
                 decoration: BoxDecoration(
                   color: isDark
                       ? const Color(0xFF2A2A2A)
                       : const Color(0xFFF5F6FA),
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(20.r),
                   border: Border.all(
                     color: isDark ? Colors.white12 : const Color(0xFFEBEBEB),
                   ),
@@ -507,14 +505,14 @@ class _ChatPageState extends State<ChatPage> {
                   controller: _controller,
                   onChanged: _onTextChanged,
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 13.sp,
                     color: isDark ? Colors.white : const Color(0xFF1A1D23),
                   ),
                   decoration: InputDecoration.collapsed(
                     hintText: 'Type a message…',
                     hintStyle: TextStyle(
                       color: isDark ? Colors.white38 : const Color(0xFF999EAE),
-                      fontSize: 13,
+                      fontSize: 13.sp,
                     ),
                   ),
                   textInputAction: TextInputAction.send,
@@ -524,27 +522,27 @@ class _ChatPageState extends State<ChatPage> {
                 ),
               ),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: 8.w),
             GestureDetector(
               onTap: _sendMessage,
               child: Container(
-                width: 36,
-                height: 36,
+                width: 36.w,
+                height: 36.h,
                 decoration: BoxDecoration(
                   color: const Color(0xFF4C6EF5),
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
                       color: const Color(0xFF4C6EF5).withOpacity(0.35),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
+                      blurRadius: 8.r,
+                      offset: Offset(0, 2.h),
                     ),
                   ],
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.send_rounded,
                   color: Colors.white,
-                  size: 16,
+                  size: 16.r,
                 ),
               ),
             ),
@@ -597,17 +595,17 @@ class _MessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
+      padding: EdgeInsets.only(bottom: 6.h),
       child: Row(
         mainAxisAlignment: message.isMe
             ? MainAxisAlignment.end
             : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          if (!message.isMe) ...[senderAvatar, const SizedBox(width: 6)],
+          if (!message.isMe) ...[senderAvatar, SizedBox(width: 6.w)],
           Flexible(
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
+              padding: EdgeInsets.symmetric(horizontal: 13.w, vertical: 9.h),
               decoration: BoxDecoration(
                 color: message.isMe
                     ? const Color(0xFF4C6EF5)
@@ -615,17 +613,17 @@ class _MessageBubble extends StatelessWidget {
                     ? const Color(0xFF2A2A2A)
                     : Colors.white,
                 borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(18),
-                  topRight: const Radius.circular(18),
-                  bottomLeft: Radius.circular(message.isMe ? 18 : 5),
-                  bottomRight: Radius.circular(message.isMe ? 5 : 18),
+                  topLeft: Radius.circular(18.r),
+                  topRight: Radius.circular(18.r),
+                  bottomLeft: Radius.circular(message.isMe ? 18.r : 5.r),
+                  bottomRight: Radius.circular(message.isMe ? 5.r : 18.r),
                 ),
                 boxShadow: message.isMe
                     ? null
                     : [
                         BoxShadow(
                           color: Colors.black.withOpacity(0.05),
-                          blurRadius: 4,
+                          blurRadius: 4.r,
                         ),
                       ],
               ),
@@ -635,7 +633,7 @@ class _MessageBubble extends StatelessWidget {
                   Text(
                     message.text,
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: 13.sp,
                       color: message.isMe
                           ? Colors.white
                           : isDark
@@ -644,24 +642,24 @@ class _MessageBubble extends StatelessWidget {
                       height: 1.5,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  SizedBox(height: 4.h),
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
                         message.time,
                         style: TextStyle(
-                          fontSize: 10,
+                          fontSize: 10.sp,
                           color: message.isMe
                               ? Colors.white.withOpacity(0.65)
                               : const Color(0xFF999EAE),
                         ),
                       ),
                       if (message.isMe) ...[
-                        const SizedBox(width: 4),
+                        SizedBox(width: 4.w),
                         Icon(
                           Icons.done_all_rounded,
-                          size: 14,
+                          size: 14.r,
                           color: message.isRead
                               ? Colors.lightBlueAccent
                               : Colors.white.withOpacity(0.65),
@@ -686,12 +684,12 @@ class _DateDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: EdgeInsets.symmetric(vertical: 8.h),
       child: Center(
         child: Text(
           label,
-          style: const TextStyle(
-            fontSize: 11,
+          style: TextStyle(
+            fontSize: 11.sp,
             color: Color(0xFF999EAE),
             fontWeight: FontWeight.w500,
           ),
@@ -716,16 +714,16 @@ class _AppBarIconBtn extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 32,
-        height: 32,
-        margin: const EdgeInsets.only(right: 4),
+        width: 32.w,
+        height: 32.h,
+        margin: EdgeInsets.only(right: 4.w),
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF0F2F8),
           shape: BoxShape.circle,
         ),
         child: Icon(
           icon,
-          size: 16,
+          size: 16.r,
           color: isDark ? Colors.white70 : const Color(0xFF555B72),
         ),
       ),

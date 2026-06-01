@@ -920,6 +920,12 @@ class AppointementService {
         }
         return Result(success: false, message: 'Unexpected response format');
       }
+      if (response.statusCode == 400) {
+        return Result(
+          success: false,
+          message: "This doctor's daily bookings are full.",
+        );
+      }
       if (response.statusCode == 401) {
         final refreshed = await AuthService().getRefreshToken();
         if (refreshed.success) {
@@ -991,10 +997,10 @@ class AppointementService {
         return Result(success: true, message: url ?? '');
       }
       if (response.statusCode == 400) {
-        final data = jsonDecode(response.body);
-        final detail = data['detail']?.toString() ?? 'Something went wrong';
-        print('Error 400: $detail');
-        return Result(success: false, message: detail);
+        return Result(
+          success: false,
+          message: "This doctor's daily bookings are full.",
+        );
       }
       if (response.statusCode == 401) {
         final refreshed = await AuthService().getRefreshToken();
@@ -1337,24 +1343,17 @@ class ChatServices {
     try {
       const secureStorage = FlutterSecureStorage();
       final String? accessToken = await secureStorage.read(key: 'access_token');
-      final String? deviceId = await secureStorage.read(key: 'device_id');
-      // DEBUG - print everything
-      print('Token: $accessToken');
-      print(
-        'URL: $_baseUrl/chat/conversations/$id/messages?page=$page&limit=$limit',
-      );
 
       final response = await http.get(
-        Uri.parse('$_baseUrl/chat/conversations/:$id/messages'),
+        Uri.parse(
+          '$_baseUrl/chat/conversations/:$id/messages?page=$page&limit=$limit',
+        ),
         headers: {
           'accept': 'application/json',
           if (accessToken != null) 'Authorization': 'Bearer $accessToken',
         },
       );
-      print("device id : $deviceId");
-      print('$_baseUrl/chat/conversations/$id/messages');
-      print('id : $id');
-      print('access token : $accessToken');
+
       print('getConversationMessages status: ${response.statusCode}');
       print('getConversationMessages body: ${response.body}');
 
@@ -1365,16 +1364,14 @@ class ChatServices {
         return [];
       }
 
-      // Token expired - refresh and retry
       if (response.statusCode == 401) {
         final refreshed = await AuthService().getRefreshToken();
         if (refreshed.success) {
           return await getConversationMessages(id, page: page, limit: limit);
         }
-        return []; // refresh failed, stop here
+        return [];
       }
 
-      // 404 = just return empty, don't retry
       return [];
     } catch (e) {
       print('getConversationMessages error: $e');
@@ -1387,13 +1384,16 @@ class ChatServices {
       const secureStorage = FlutterSecureStorage();
       final String? accessToken = await secureStorage.read(key: 'access_token');
 
+      final Map<String, dynamic> body = {};
+      if (name != null) body['name'] = name;
+
       final response = await http.patch(
         Uri.parse('$_baseUrl/chat/conversations/:$conversationId/'),
         headers: {
           'Content-Type': 'application/json',
           if (accessToken != null) 'Authorization': 'Bearer $accessToken',
         },
-        body: jsonEncode({'name': ?name}),
+        body: jsonEncode(body),
       );
 
       print('modifyConversation status: ${response.statusCode}');

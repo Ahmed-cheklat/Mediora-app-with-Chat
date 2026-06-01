@@ -42,8 +42,6 @@ class _GmailEnterState extends State<GmailEnter> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     40.verticalSpace,
-
-                    //Text of Join Mediora
                     Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
@@ -56,7 +54,6 @@ class _GmailEnterState extends State<GmailEnter> {
                       ),
                     ),
                     10.verticalSpace,
-                    //text for the description
                     Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
@@ -70,7 +67,6 @@ class _GmailEnterState extends State<GmailEnter> {
                       ),
                     ),
                     40.verticalSpace,
-                    //gmail field starting
                     Padding(
                       padding: EdgeInsets.only(left: 8.0.w),
                       child: Align(
@@ -92,7 +88,7 @@ class _GmailEnterState extends State<GmailEnter> {
                     ),
                     15.verticalSpace,
                     Padding(
-                      padding: const EdgeInsets.all(8.0),
+                      padding: EdgeInsets.all(8.0.r),
                       child: Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
@@ -136,9 +132,8 @@ class _GmailEnterState extends State<GmailEnter> {
                           Navigator.pushAndRemoveUntil(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => GmailValidation(
-                                email: gmailcontroller.text,
-                              ),
+                              builder: (context) =>
+                                  GmailValidation(email: gmailcontroller.text),
                             ),
                             (route) => false,
                           );
@@ -205,43 +200,13 @@ class GmailFieldForSignIn extends StatelessWidget {
 
         if (trimmed.contains('@')) {
           // ── EMAIL VALIDATION ──────────────────────────────────
-
-          if (trimmed.contains(' ')) return "Invalid email address";
-          if (trimmed.split('@').length != 2) return "Invalid email address";
-
-          final parts = trimmed.split('@');
-          final localPart = parts[0];
-          final domainPart = parts[1];
-
-          if (localPart.isEmpty || domainPart.isEmpty)
-            return "Invalid email address";
-          if (localPart.startsWith('.') || localPart.endsWith('.'))
-            return "Invalid email address";
-          if (localPart.contains('..')) return "Invalid email address";
-
-          if (!domainPart.endsWith('.com')) return "Invalid email address";
-          if (domainPart.startsWith('.') || domainPart.endsWith('.'))
-            return "Invalid email address";
-          if (domainPart.contains('..')) return "Invalid email address";
-
-          if (!RegExp(r'^[\w\-\.]+@([\w\-]+\.)+com$').hasMatch(trimmed))
-            return "Invalid email address";
-
-          final blockedDomains = [
-            'test.com',
-            'example.com',
-            'fake.com',
-            'dummy.com',
-          ];
-          if (blockedDomains.contains(domainPart.toLowerCase()))
+          if (!RegExp(r'^[\w\.\-]+@[\w\-]+(\.[\w\-]+)+$').hasMatch(trimmed))
             return "Invalid email address";
         } else {
           // ── USERNAME VALIDATION ───────────────────────────────
-
           if (trimmed.length < 3) return "Invalid username";
           if (trimmed.length > 30) return "Invalid username";
 
-          // Only lowercase letters, digits, underscores, and dots
           if (!RegExp(r'^[a-z0-9._]+$').hasMatch(trimmed))
             return "Invalid username";
 
@@ -257,7 +222,6 @@ class GmailFieldForSignIn extends StatelessWidget {
             return "Invalid username";
           }
 
-          // Must contain at least one letter
           if (!RegExp(r'[a-z]').hasMatch(trimmed)) return "Invalid username";
         }
 
@@ -283,7 +247,7 @@ class GmailFieldForSignIn extends StatelessWidget {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(15.r),
-          borderSide: BorderSide(color: Color(0xFF2463EB), width: 2),
+          borderSide: BorderSide(color: Color(0xFF2463EB), width: 2.w),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(15.r),
@@ -291,7 +255,7 @@ class GmailFieldForSignIn extends StatelessWidget {
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(15.r),
-          borderSide: BorderSide(color: Colors.red, width: 2),
+          borderSide: BorderSide(color: Colors.red, width: 2.w),
         ),
       ),
     );

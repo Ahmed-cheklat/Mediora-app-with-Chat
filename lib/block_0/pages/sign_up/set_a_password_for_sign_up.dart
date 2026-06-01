@@ -5,9 +5,6 @@ import 'package:mediora/block_0/pages/sign_up/number_adding.dart';
 
 enum PasswordFlow { signUp, forgetPasswordAuth, forgetPasswordSettings }
 
-//Function and classes used in this file and it contain this file
-//  class Custom Button, function (string) validatePassword, class Createpasswordforsignup,
-// class customsnackbarforsignup , class confirmpassword
 
 class ConfirmPasswordForSignUp extends StatefulWidget {
   final TextEditingController controller;
@@ -165,7 +162,6 @@ class _CreatePasswordForSignUpState extends State<CreatePasswordForSignUp> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Password field
         TextFormField(
           controller: widget.controller,
           focusNode: _focusNode,
@@ -211,8 +207,8 @@ class _CreatePasswordForSignUpState extends State<CreatePasswordForSignUp> {
               borderSide: const BorderSide(color: Colors.red),
             ),
             focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(15),
-              borderSide: const BorderSide(color: Colors.red, width: 2),
+              borderRadius: BorderRadius.circular(15.r),
+              borderSide: BorderSide(color: Colors.red, width: 2.w),
             ),
             errorStyle: TextStyle(
               fontFamily: 'LineSeedJP',
@@ -238,14 +234,13 @@ class _CreatePasswordForSignUpState extends State<CreatePasswordForSignUp> {
           },
         ),
 
-        const SizedBox(height: 16),
+        SizedBox(height: 16.h),
 
-        // Simple requirements check
         if (_isTouched) ...[
           _buildRequirement('✓ 8+ characters', _hasMinLength),
-          const SizedBox(height: 4),
+          SizedBox(height: 4.h),
           _buildRequirement('✓ 1 uppercase', _hasUpperCase),
-          const SizedBox(height: 4),
+          SizedBox(height: 4.h),
           _buildRequirement('✓ 1 special character', _hasSymbol),
         ],
       ],
@@ -257,14 +252,13 @@ class _CreatePasswordForSignUpState extends State<CreatePasswordForSignUp> {
       text,
       style: TextStyle(
         fontFamily: 'LineSeedJP',
-        fontSize: 13,
+        fontSize: 13.sp,
         color: isMet ? Colors.green : Colors.red,
       ),
     );
   }
 }
 
-//Custom snack bar instead in order to avoid the problem of duplicated
 class CustomSnackBarForSignUp {
   static void show(
     BuildContext context, {
@@ -418,7 +412,6 @@ class _PasswordPageState extends State<PasswordPage> {
                   CustomButton(
                     function: () async {
                       if (_isLoading) return; 
-                      // 1. Validate form
                       if (!_formKey.currentState!.validate()) return;
                       final error = validatePasswords(
                         passwordcontroller,
@@ -434,13 +427,10 @@ class _PasswordPageState extends State<PasswordPage> {
                         return;
                       }
 
-                      // 2. Start loading
                       setState(() => _isLoading = true);
 
-                      // 3. Create auth service instance (reuse)
                       final authService = AuthService();
 
-                      // 4. Perform sign up
                       final result = await authService.SignUp(
                         firstName: widget.firstName,
                         lastName: widget.lastName,
@@ -452,7 +442,6 @@ class _PasswordPageState extends State<PasswordPage> {
 
                       if (!mounted) return;
 
-                      // 5. Handle sign up failure
                       if (!result.success) {
                         setState(() => _isLoading = false);
                         CustomSnackBarForSignUp.show(
@@ -464,8 +453,6 @@ class _PasswordPageState extends State<PasswordPage> {
                         return;
                       }
 
-                      // 6. Sign up succeeded → get refresh token
-
                       setState(() => _isLoading = false);
                       Navigator.pushAndRemoveUntil(
                       context,
@@ -473,7 +460,6 @@ class _PasswordPageState extends State<PasswordPage> {
                       (route) => false,
                     );
                     },
-                    //Design of the button
                     mywidget: _isLoading
                         ? SizedBox(
                             height: 20.r,

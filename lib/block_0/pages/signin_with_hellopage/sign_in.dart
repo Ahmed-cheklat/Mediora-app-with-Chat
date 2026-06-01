@@ -67,7 +67,7 @@ class _SignInState extends State<SignIn> {
                   Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      "Email",
+                      "Email / Username",
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontFamily: 'LineSeedJP',
@@ -166,7 +166,7 @@ class _SignInState extends State<SignIn> {
                         Navigator.pushAndRemoveUntil(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const   Homepage(),
+                            builder: (context) => const Homepage(),
                           ),
                           (route) => false,
                         );
@@ -224,42 +224,36 @@ class GmailField extends StatelessWidget {
       keyboardType: TextInputType.emailAddress,
       autofillHints: const [AutofillHints.email],
       validator: (value) {
-        if (value == null || value.isEmpty) return "Email is required";
+        if (value == null || value.isEmpty)
+          return "Email or username is required";
 
         final trimmed = value.trim();
 
-        if (trimmed.contains(' ')) return "Invalid email address";
-        if (trimmed.split('@').length != 2) return "Invalid email address";
+        if (trimmed.contains('@')) {
+          // ── EMAIL VALIDATION ──────────────────────────────────
+          if (!RegExp(r'^[\w\.\-]+@[\w\-]+(\.[\w\-]+)+$').hasMatch(trimmed))
+            return "Invalid email address";
+        } else {
+          // ── USERNAME VALIDATION ───────────────────────────────
+          if (trimmed.length < 3) return "Invalid username";
+          if (trimmed.length > 30) return "Invalid username";
 
-        final parts = trimmed.split('@');
-        final localPart = parts[0];
-        final domainPart = parts[1];
+          if (!RegExp(r'^[a-z0-9._]+$').hasMatch(trimmed))
+            return "Invalid username";
 
-        if (localPart.isEmpty) return "Invalid email address";
-        if (localPart.startsWith('.') || localPart.endsWith('.')) {
-          return "Invalid email address";
+          if (trimmed.startsWith('.') || trimmed.startsWith('_'))
+            return "Invalid username";
+          if (trimmed.endsWith('.') || trimmed.endsWith('_'))
+            return "Invalid username";
+
+          if (trimmed.contains('..') ||
+              trimmed.contains('__') ||
+              trimmed.contains('._') ||
+              trimmed.contains('_.'))
+            return "Invalid username";
+
+          if (!RegExp(r'[a-z]').hasMatch(trimmed)) return "Invalid username";
         }
-        if (localPart.contains('..')) return "Invalid email address";
-
-        if (!domainPart.endsWith('.com')) return "Invalid email address";
-        if (domainPart.startsWith('.') || domainPart.endsWith('.')) {
-          return "Invalid email address";
-        }
-        if (domainPart.contains('..')) return "Invalid email address";
-
-        if (!RegExp(r'^[\w\-\.]+@([\w\-]+\.)+com$').hasMatch(trimmed)) {
-          return "Invalid email address";
-        }
-
-        final blockedDomains = [
-          'test.com',
-          'example.com',
-          'fake.com',
-          'dummy.com',
-        ];
-        if (blockedDomains.contains(domainPart.toLowerCase()))
-          return "Invalid email address";
-
         return null;
       },
       decoration: InputDecoration(
@@ -498,7 +492,11 @@ class _SignInWithGoogleButtonState extends State<SignInWithGoogleButton> {
             : Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Image.asset("assets/google_icon.png", height: 24.r, width: 24.r),
+                  Image.asset(
+                    "assets/google_icon.png",
+                    height: 24.r,
+                    width: 24.r,
+                  ),
                   8.horizontalSpace,
                   Text(
                     'Sign in with Google',
@@ -539,131 +537,6 @@ class PolicyLink extends StatelessWidget {
           decoration: TextDecoration.underline,
           decorationColor: Color(0xFF2463EB),
           decorationThickness: 1.5,
-        ),
-      ),
-    );
-  }
-}
-
-class GmailFieldForSignIn extends StatelessWidget {
-  final TextEditingController gmailInputController;
-  final String hinttext;
-  const GmailFieldForSignIn({
-    super.key,
-    required this.gmailInputController,
-    required this.hinttext,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return TextFormField(
-      controller: gmailInputController,
-      keyboardType: TextInputType.emailAddress,
-      autofillHints: const [AutofillHints.email],
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return "Email or username is required";
-        }
-
-        final trimmed = value.trim();
-
-        if (trimmed.contains('@')) {
-          // ── EMAIL VALIDATION ──────────────────────────────────
-
-          if (trimmed.contains(' ')) return "Invalid email address";
-          if (trimmed.split('@').length != 2) return "Invalid email address";
-
-          final parts = trimmed.split('@');
-          final localPart = parts[0];
-          final domainPart = parts[1];
-
-          if (localPart.isEmpty || domainPart.isEmpty) {
-            return "Invalid email address";
-          }
-          if (localPart.startsWith('.') || localPart.endsWith('.')) {
-            return "Invalid email address";
-          }
-          if (localPart.contains('..')) return "Invalid email address";
-
-          if (!domainPart.endsWith('.com')) return "Invalid email address";
-          if (domainPart.startsWith('.') || domainPart.endsWith('.')) {
-            return "Invalid email address";
-          }
-          if (domainPart.contains('..')) return "Invalid email address";
-
-          if (!RegExp(r'^[\w\-\.]+@([\w\-]+\.)+com$').hasMatch(trimmed)) {
-            return "Invalid email address";
-          }
-
-          final blockedDomains = [
-            'test.com',
-            'example.com',
-            'fake.com',
-            'dummy.com',
-          ];
-          if (blockedDomains.contains(domainPart.toLowerCase())) {
-            return "Invalid email address";
-          }
-        } else {
-          // ── USERNAME VALIDATION ───────────────────────────────
-
-          if (trimmed.length < 3) return "Invalid username";
-          if (trimmed.length > 30) return "Invalid username";
-
-          // Only lowercase letters, digits, underscores, and dots
-          if (!RegExp(r'^[a-z0-9._]+$').hasMatch(trimmed)) {
-            return "Invalid username";
-          }
-
-          if (trimmed.startsWith('.') || trimmed.startsWith('_')) {
-            return "Invalid username";
-          }
-          if (trimmed.endsWith('.') || trimmed.endsWith('_')) {
-            return "Invalid username";
-          }
-
-          if (trimmed.contains('..') ||
-              trimmed.contains('__') ||
-              trimmed.contains('._') ||
-              trimmed.contains('_.')) {
-            return "Invalid username";
-          }
-
-          // Must contain at least one letter
-          if (!RegExp(r'[a-z]').hasMatch(trimmed)) return "Invalid username";
-        }
-
-        return null;
-      },
-      decoration: InputDecoration(
-        hintText: hinttext,
-        hintStyle: TextStyle(
-          color: Colors.grey,
-          fontFamily: "LineSeedJP",
-          fontSize: 14.sp,
-        ),
-        prefixIcon: Icon(
-          Icons.email_outlined,
-          color: Color(0xFF2463EB),
-          size: 24.sp,
-        ),
-        contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(15.r)),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(15.r),
-          borderSide: BorderSide(color: Colors.grey),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(15.r),
-          borderSide: BorderSide(color: Color(0xFF2463EB), width: 2),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(15.r),
-          borderSide: BorderSide(color: Colors.red),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(15.r),
-          borderSide: BorderSide(color: Colors.red, width: 2),
         ),
       ),
     );

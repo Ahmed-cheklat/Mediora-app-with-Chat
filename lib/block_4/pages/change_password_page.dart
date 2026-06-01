@@ -29,7 +29,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Change Password', style: TextStyle(fontSize: 20)),
+        title: Text('Change Password', style: TextStyle(fontSize: 20.sp)),
       ),
       body: Padding(
         padding: EdgeInsets.all(16.0.w),
@@ -40,7 +40,6 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
               child: Column(
                 children: [
                   20.verticalSpace,
-                  // Text of chnaging password
                   Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
@@ -54,7 +53,6 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                     ),
                   ),
                   40.verticalSpace,
-                  //Title of current password
                   Padding(
                     padding: EdgeInsets.all(8.w),
                     child: Align(
@@ -68,7 +66,6 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                       ),
                     ),
                   ),
-                  //Field of current password
                   CurrentPasswordField(controller: _currentPasswordController),
                   Align(
                     alignment: AlignmentGeometry.bottomLeft,
@@ -78,7 +75,6 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                     ),
                   ),
                   5.verticalSpace,
-                  //Title of New password
                   Padding(
                     padding: EdgeInsets.all(8.w),
                     child: Align(
@@ -94,7 +90,6 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                   ),
                   CreatePassword(controller: _newPasswordController),
                   5.verticalSpace,
-                  //Title of confirm password
 
                   //ConfirmPasswordField(controller: _confirmPasswordController),
                   70.verticalSpace,

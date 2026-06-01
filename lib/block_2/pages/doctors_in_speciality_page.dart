@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:mediora/Network/networkServices.dart';
 import 'package:mediora/block_2/pages/doctor_page.dart';
 import 'package:mediora/block_2/tools/doctor_card.dart';
@@ -18,10 +19,22 @@ class _DoctorsInSpecialityState extends State<DoctorsInSpeciality> {
   final List<dynamic> _doctors = [];
   final ScrollController _scrollController = ScrollController();
 
+  String _searchQuery = ''; 
+
   bool _isLoading = false;
   bool _isLoadingDoctor = false;
   bool _hasMore = true;
   int _skip = 0;
+
+  List<dynamic> get _filteredDoctors {
+    if (_searchQuery.isEmpty) return _doctors;
+    final query = _searchQuery.toLowerCase();
+    return _doctors.where((doctor) {
+      final first = (doctor['first_name'] ?? '').toString().toLowerCase();
+      final last = (doctor['last_name'] ?? '').toString().toLowerCase();
+      return first.startsWith(query) || last.startsWith(query);
+    }).toList();
+  }
 
   @override
   void initState() {
@@ -29,9 +42,10 @@ class _DoctorsInSpecialityState extends State<DoctorsInSpeciality> {
     _fetchMore();
     _scrollController.addListener(() {
       if (_scrollController.position.pixels >=
-              _scrollController.position.maxScrollExtent - 100 &&
+              _scrollController.position.maxScrollExtent - 100.w &&
           !_isLoading &&
-          _hasMore) {
+          _hasMore &&
+          _searchQuery.isEmpty) {
         _fetchMore();
       }
     });
@@ -71,6 +85,8 @@ class _DoctorsInSpecialityState extends State<DoctorsInSpeciality> {
 
   @override
   Widget build(BuildContext context) {
+    final filtered = _filteredDoctors;
+
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
@@ -80,7 +96,7 @@ class _DoctorsInSpecialityState extends State<DoctorsInSpeciality> {
         ),
         title: Text(
           widget.specialtyName,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold),
         ),
       ),
       body: Stack(
@@ -88,27 +104,31 @@ class _DoctorsInSpecialityState extends State<DoctorsInSpeciality> {
           Column(
             children: [
               SearchForDoctorInSpeciality(
-                onSearch: (firstName, lastName) {
-                  print('firstName: $firstName, lastName: $lastName');
+                onChanged: (value) {
+                  setState(() => _searchQuery = value);
+                },
+                onCleared: () {
+                  setState(() => _searchQuery = '');
                 },
               ),
               Expanded(
-                child: _doctors.isEmpty && !_isLoading
+                child: filtered.isEmpty && !_isLoading
                     ? const Center(
                         child: Text('No doctors found for this specialty.'),
                       )
                     : ListView.builder(
                         controller: _scrollController,
-                        itemCount: _doctors.length + (_hasMore ? 1 : 0),
+                        itemCount: filtered.length +
+                            (_hasMore && _searchQuery.isEmpty ? 1 : 0),
                         itemBuilder: (context, index) {
-                          if (index == _doctors.length) {
-                            return const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 24),
-                              child: Center(child: CircularProgressIndicator()),
+                          if (index == filtered.length) {
+                            return Padding(
+                              padding: EdgeInsets.symmetric(vertical: 24.h),
+                              child: const Center(child: CircularProgressIndicator()),
                             );
                           }
 
-                          final doctor = _doctors[index];
+                          final doctor = filtered[index];
 
                           final firstName = _cleanString(doctor['first_name']);
                           final lastName = _cleanString(doctor['last_name']);
@@ -155,7 +175,6 @@ class _DoctorsInSpecialityState extends State<DoctorsInSpeciality> {
             ],
           ),
 
-          // Full page loading overlay
           if (_isLoadingDoctor)
             Container(
               color: Colors.black.withOpacity(0.4),
@@ -171,10 +190,17 @@ class _DoctorsInSpecialityState extends State<DoctorsInSpeciality> {
   }
 }
 
-class SearchForDoctorInSpeciality extends StatefulWidget {
-  final Function(String firstName, String? lastName) onSearch;
+// ----------------------------------------
 
-  const SearchForDoctorInSpeciality({super.key, required this.onSearch});
+class SearchForDoctorInSpeciality extends StatefulWidget {
+  final Function(String value) onChanged;
+  final VoidCallback onCleared;
+
+  const SearchForDoctorInSpeciality({
+    super.key,
+    required this.onChanged,
+    required this.onCleared,
+  });
 
   @override
   State<SearchForDoctorInSpeciality> createState() =>
@@ -184,22 +210,6 @@ class SearchForDoctorInSpeciality extends StatefulWidget {
 class _SearchForDoctorInSpecialityState
     extends State<SearchForDoctorInSpeciality> {
   final TextEditingController _controller = TextEditingController();
-
-  void _onSubmitted(String value) {
-    final trimmed = value.trim();
-    if (trimmed.isEmpty) return;
-
-    final parts = trimmed.split(RegExp(r'\s+'));
-    final firstName = _capitalize(parts[0]);
-    final lastName = parts.length > 1 ? _capitalize(parts[1]) : null;
-
-    widget.onSearch(firstName, lastName);
-  }
-
-  String _capitalize(String word) {
-    if (word.isEmpty) return word;
-    return word[0].toUpperCase() + word.substring(1).toLowerCase();
-  }
 
   @override
   void dispose() {
@@ -214,38 +224,44 @@ class _SearchForDoctorInSpecialityState
         isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF3F4F6);
     final textColor = isDark ? Colors.white : Colors.black;
 
-    return TextFormField(
-      controller: _controller,
-      cursorColor: const Color(0xFF2463EB),
-      style: TextStyle(color: textColor),
-      textInputAction: TextInputAction.search,
-      onFieldSubmitted: _onSubmitted,
-      decoration: InputDecoration(
-        hintText: "Search for a doctor...",
-        hintStyle: const TextStyle(color: Colors.grey),
-        prefixIcon: const Icon(Icons.search, color: Color(0xFF2463EB)),
-        suffixIcon: _controller.text.isNotEmpty
-            ? IconButton(
-                icon: const Icon(Icons.close, color: Colors.grey),
-                onPressed: () {
-                  _controller.clear();
-                  setState(() {});
-                },
-              )
-            : null,
-        filled: true,
-        fillColor: fieldFill,
-        contentPadding: const EdgeInsets.symmetric(vertical: 18),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide.none,
+    return Padding(
+      padding: EdgeInsets.all(12.0.r),
+      child: TextFormField(
+        controller: _controller,
+        cursorColor: const Color(0xFF2463EB),
+        style: TextStyle(color: textColor),
+        decoration: InputDecoration(
+          hintText: "Search by doctor name...",
+          hintStyle: const TextStyle(color: Colors.grey),
+          prefixIcon: const Icon(Icons.search, color: Color(0xFF2463EB)),
+          suffixIcon: _controller.text.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.close, color: Colors.grey),
+                  onPressed: () {
+                    _controller.clear();
+                    setState(() {});
+                    widget.onCleared();
+                  },
+                )
+              : null,
+          filled: true,
+          fillColor: fieldFill,
+          contentPadding: EdgeInsets.symmetric(vertical: 18.h),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14.r),
+            borderSide: BorderSide.none,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14.r),
+            borderSide:
+                BorderSide(color: const Color(0xFF2463EB), width: 1.5.w),
+          ),
         ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xFF2463EB), width: 1.5),
-        ),
+        onChanged: (value) {
+          setState(() {});
+          widget.onChanged(value);
+        },
       ),
-      onChanged: (_) => setState(() {}),
     );
   }
 }

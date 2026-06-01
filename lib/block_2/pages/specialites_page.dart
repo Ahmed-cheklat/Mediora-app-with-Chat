@@ -48,7 +48,7 @@ class _AppointmentPageState extends State<AppointmentPage> {
       body: ListView(
         children: [
           Padding(
-            padding: const EdgeInsets.all(12.0),
+            padding: EdgeInsets.all(12.r),
             child: SearchForDoctorField(
               specialties: specialties,
               onSelected: _onSearchSelected,
@@ -159,36 +159,36 @@ class _SearchForDoctorFieldState extends State<SearchForDoctorField> {
                 : null,
             filled: true,
             fillColor: fieldFill,
-            contentPadding: const EdgeInsets.symmetric(vertical: 18),
+            contentPadding: EdgeInsets.symmetric(vertical: 18.h),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(14.r),
               borderSide: BorderSide.none,
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(
+              borderRadius: BorderRadius.circular(14.r),
+              borderSide: BorderSide(
                 color: Color(0xFF2463EB),
-                width: 1.5,
+                width: 1.5.w,
               ),
             ),
           ),
         ),
         if (_showDropdown)
           Container(
-            margin: const EdgeInsets.only(top: 4),
+            margin: EdgeInsets.only(top: 4.h),
             decoration: BoxDecoration(
               color: dropdownBg,
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(14.r),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(isDark ? 0.3 : 0.08),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
+                  blurRadius: 12.r,
+                  offset: Offset(0, 4.h),
                 ),
               ],
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(14.r),
               child: Column(
                 children: _filtered.asMap().entries.map((entry) {
                   final index = entry.key;
@@ -202,22 +202,22 @@ class _SearchForDoctorFieldState extends State<SearchForDoctorField> {
                           widget.onSelected(specialty);
                         },
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 14,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 16.w,
+                            vertical: 14.h,
                           ),
                           child: Row(
                             children: [
                               Icon(
                                 specialty['icon'],
                                 color: const Color(0xFF2463EB),
-                                size: 22,
+                                size: 22.r,
                               ),
-                              const SizedBox(width: 12),
+                              SizedBox(width: 12.w),
                               Text(
                                 specialty['specialty'],
                                 style: TextStyle(
-                                  fontSize: 15,
+                                  fontSize: 15.sp,
                                   color: textColor,
                                 ),
                               ),
@@ -226,7 +226,7 @@ class _SearchForDoctorFieldState extends State<SearchForDoctorField> {
                         ),
                       ),
                       if (index < _filtered.length - 1)
-                        Divider(height: 1, color: dividerColor),
+                        Divider(height: 1.h, color: dividerColor),
                     ],
                   );
                 }).toList(),
